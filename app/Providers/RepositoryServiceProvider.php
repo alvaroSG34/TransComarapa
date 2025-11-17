@@ -7,11 +7,13 @@ use App\Repositories\Contracts\VehiculoRepositoryInterface;
 use App\Repositories\Contracts\RutaRepositoryInterface;
 use App\Repositories\Contracts\VentaRepositoryInterface;
 use App\Repositories\Contracts\PagoVentaRepositoryInterface;
+use App\Repositories\Contracts\ViajeRepositoryInterface;
 use App\Repositories\Eloquent\UsuarioRepository;
 use App\Repositories\Eloquent\VehiculoRepository;
 use App\Repositories\Eloquent\RutaRepository;
 use App\Repositories\Eloquent\VentaRepository;
 use App\Repositories\Eloquent\PagoVentaRepository;
+use App\Repositories\Eloquent\ViajeRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -45,6 +47,11 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(
             PagoVentaRepositoryInterface::class,
             PagoVentaRepository::class
+        );
+
+        $this->app->bind(
+            ViajeRepositoryInterface::class,
+            ViajeRepository::class
         );
     }
 

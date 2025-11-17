@@ -1,0 +1,131 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, router } from '@inertiajs/vue3';
+
+const props = defineProps({
+    conductores: Array
+});
+
+const eliminarConductor = (id, nombre, apellido) => {
+    if (confirm(`¿Está seguro de eliminar al conductor ${nombre} ${apellido}?`)) {
+        router.delete(route('conductores.destroy', id), {
+            preserveScroll: true
+        });
+    }
+};
+</script>
+
+<template>
+    <Head title="Conductores" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <div class="flex justify-between items-center">
+                <h2 class="font-semibold text-xl" style="color: var(--text-primary)">
+                    Conductores
+                </h2>
+                <a
+                    :href="route('conductores.create')"
+                    class="px-4 py-2 rounded-md text-sm font-medium"
+                    style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                >
+                    + Nuevo Conductor
+                </a>
+            </div>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
+                    <div class="p-6" style="color: var(--text-primary)">
+                        <!-- Lista de Conductores -->
+                        <div v-if="conductores.length > 0" class="overflow-x-auto">
+                            <table class="min-w-full divide-y" style="border-color: var(--border-color)">
+                                <thead>
+                                    <tr style="background-color: var(--header-bg)">
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Nombre Completo
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            CI
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Teléfono
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Correo
+                                        </th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Acciones
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" style="border-color: var(--border-color)">
+                                    <tr v-for="conductor in conductores" :key="conductor.id" class="hover:bg-opacity-50" style="background-color: var(--card-bg)">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium" style="color: var(--text-primary)">
+                                                {{ conductor.nombre }} {{ conductor.apellido }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm" style="color: var(--text-primary)">
+                                                {{ conductor.ci }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm" style="color: var(--text-primary)">
+                                                {{ conductor.telefono || 'N/A' }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm" style="color: var(--text-secondary)">
+                                                {{ conductor.correo }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <a
+                                                :href="route('conductores.edit', conductor.id)"
+                                                class="inline-block px-3 py-1 rounded text-sm"
+                                                style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                                            >
+                                                Editar
+                                            </a>
+                                            <button
+                                                @click="eliminarConductor(conductor.id, conductor.nombre, conductor.apellido)"
+                                                class="inline-block px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Estado Vacío -->
+                        <div v-else class="text-center py-12">
+                            <svg class="mx-auto h-12 w-12 opacity-50" style="color: var(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium" style="color: var(--text-primary)">
+                                No hay conductores registrados
+                            </h3>
+                            <p class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                Comienza registrando un nuevo conductor.
+                            </p>
+                            <div class="mt-6">
+                                <a
+                                    :href="route('conductores.create')"
+                                    class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium"
+                                    style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                                >
+                                    + Nuevo Conductor
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>

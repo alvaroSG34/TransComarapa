@@ -24,12 +24,14 @@ const navigationLinks = computed(() => {
         return [
             { name: 'Dashboard', route: 'dashboard' },
             { name: 'Rutas', route: 'rutas.index' },
+            { name: 'Viajes', route: 'viajes.index' },
             { name: 'Boletos', route: 'boletos.index' },
             { name: 'Encomiendas', route: 'encomiendas.index' },
             { name: 'Ventas', route: 'ventas.index' },
             { name: 'Clientes', route: 'clientes.index' },
             ...(role === 'Admin' ? [
                 { name: 'Vehículos', route: 'vehiculos.index' },
+                { name: 'Conductores', route: 'conductores.index' },
                 { name: 'Estadísticas', route: 'estadisticas.index' }
             ] : [])
         ];

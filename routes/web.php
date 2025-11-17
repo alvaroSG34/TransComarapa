@@ -38,6 +38,10 @@ Route::middleware('auth')->group(function () {
         // Rutas - CRUD
         Route::resource('rutas', \App\Http\Controllers\RutaController::class);
         
+        // Viajes - CRUD
+        Route::resource('viajes', \App\Http\Controllers\ViajeController::class);
+        Route::post('/viajes/{id}/cambiar-estado', [\App\Http\Controllers\ViajeController::class, 'cambiarEstado'])->name('viajes.cambiar-estado');
+        
         // Boletos - CRUD
         Route::resource('boletos', \App\Http\Controllers\BoletoController::class);
         
@@ -56,6 +60,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['can:isAdmin'])->group(function () {
         // Vehículos - CRUD
         Route::resource('vehiculos', \App\Http\Controllers\VehiculoController::class);
+        
+        // Conductores - CRUD
+        Route::resource('conductores', \App\Http\Controllers\ConductorController::class);
         
         // Estadísticas
         Route::get('/estadisticas', [\App\Http\Controllers\EstadisticaController::class, 'index'])->name('estadisticas.index');

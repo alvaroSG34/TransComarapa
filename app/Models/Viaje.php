@@ -47,6 +47,11 @@ class Viaje extends Model
     // Accesor: Asientos disponibles
     public function getAsientosDisponiblesAttribute()
     {
+        // Si ya se cargó el count mediante withCount, usarlo
+        if (isset($this->attributes['boletos_count'])) {
+            return $this->asientos_totales - $this->attributes['boletos_count'];
+        }
+        // Si no, hacer la consulta
         return $this->asientos_totales - $this->boletos()->count();
     }
 
