@@ -12,12 +12,18 @@ class Boleto extends Model
     protected $table = 'boletos';
 
     protected $fillable = [
+        'viaje_id',
         'asiento',
         'venta_id',
         'ruta_id',
     ];
 
     // Relaciones
+    public function viaje()
+    {
+        return $this->belongsTo(Viaje::class, 'viaje_id');
+    }
+
     public function venta()
     {
         return $this->belongsTo(Venta::class, 'venta_id');

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -11,9 +11,37 @@ import { useTheme } from '@/composables/useTheme';
 
 const showingNavigationDropdown = ref(false);
 const { initializeTheme } = useTheme();
+const page = usePage();
+
+// Obtener el rol del usuario actual
+const userRole = computed(() => page.props.auth?.user?.rol || 'Cliente');
+
+// Menú de navegación según rol
+const navigationLinks = computed(() => {
+    const role = userRole.value;
+    
+    if (role === 'Admin' || role === 'Secretaria') {
+        return [
+            { name: 'Dashboard', route: 'dashboard' },
+            { name: 'Rutas', route: 'rutas.index' },
+            { name: 'Boletos', route: 'boletos.index' },
+            { name: 'Encomiendas', route: 'encomiendas.index' },
+            { name: 'Ventas', route: 'ventas.index' },
+            { name: 'Clientes', route: 'clientes.index' },
+            ...(role === 'Admin' ? [
+                { name: 'Vehículos', route: 'vehiculos.index' },
+                { name: 'Estadísticas', route: 'estadisticas.index' }
+            ] : [])
+        ];
+    }
+    
+    // Cliente (navegación diferente, se manejará en otro layout)
+    return [
+        { name: 'Inicio', route: 'dashboard' }
+    ];
+});
 
 onMounted(() => {
-    const page = usePage();
     const userTheme = page.props.auth?.user?.tema_preferido;
     const serverTimeMode = page.props.timeMode;
     
@@ -45,10 +73,12 @@ onMounted(() => {
                                 class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
                             >
                                 <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
+                                    v-for="link in navigationLinks"
+                                    :key="link.route"
+                                    :href="route(link.route)"
+                                    :active="route().current(link.route)"
                                 >
-                                    Dashboard
+                                    {{ link.name }}
                                 </NavLink>
                             </div>
                         </div>

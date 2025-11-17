@@ -36,6 +36,11 @@ class Vehiculo extends Model
         return $this->belongsTo(Usuario::class, 'conductor_id');
     }
 
+    public function viajes()
+    {
+        return $this->hasMany(Viaje::class, 'vehiculo_id');
+    }
+
     public function ventas()
     {
         return $this->hasMany(Venta::class, 'vehiculo_id');

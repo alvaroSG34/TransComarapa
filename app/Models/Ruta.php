@@ -18,6 +18,11 @@ class Ruta extends Model
     ];
 
     // Relaciones
+    public function viajes()
+    {
+        return $this->hasMany(Viaje::class, 'ruta_id');
+    }
+
     public function boletos()
     {
         return $this->hasMany(Boleto::class, 'ruta_id');

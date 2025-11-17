@@ -6,6 +6,7 @@ use App\Events\PagoVentaCreated;
 use App\Events\PagoVentaUpdated;
 use App\Listeners\ActualizarEstadoVenta;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -29,5 +30,22 @@ class AppServiceProvider extends ServiceProvider
         // Registrar eventos y listeners
         Event::listen(PagoVentaCreated::class, ActualizarEstadoVenta::class);
         Event::listen(PagoVentaUpdated::class, ActualizarEstadoVenta::class);
+
+        // Definir Gates para autorización por roles
+        Gate::define('isAdmin', function ($user) {
+            return $user->rol === 'Admin';
+        });
+
+        Gate::define('isSecretaria', function ($user) {
+            return $user->rol === 'Secretaria';
+        });
+
+        Gate::define('isCliente', function ($user) {
+            return $user->rol === 'Cliente';
+        });
+
+        Gate::define('isSecretariaOrAdmin', function ($user) {
+            return in_array($user->rol, ['Secretaria', 'Admin']);
+        });
     }
 }
