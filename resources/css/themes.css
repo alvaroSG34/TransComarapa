@@ -1,0 +1,283 @@
+/* ============================================
+   VARIABLES CSS PARA SISTEMA DE TEMAS
+   ============================================ */
+
+:root {
+    /* Tema por defecto (Jóvenes) */
+    --primary: 59 130 246;
+    --primary-foreground: 255 255 255;
+    --secondary: 148 163 184;
+    --secondary-foreground: 15 23 42;
+    --background: 255 255 255;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-foreground: 15 23 42;
+    --border: 226 232 240;
+    --input: 226 232 240;
+    --ring: 59 130 246;
+    --radius: 0.5rem;
+}
+
+/* ============================================
+   TEMA NIÑOS - Colores brillantes y divertidos
+   ============================================ */
+
+.theme-ninos {
+    /* Modo Día */
+    --primary: 236 72 153;           /* Rosa brillante */
+    --primary-foreground: 255 255 255;
+    --secondary: 251 146 60;          /* Naranja */
+    --secondary-foreground: 255 255 255;
+    --accent: 34 197 94;              /* Verde brillante */
+    --accent-foreground: 255 255 255;
+    --background: 254 243 199;        /* Amarillo muy suave */
+    --foreground: 124 45 18;          /* Marrón oscuro */
+    --card: 255 255 255;
+    --card-foreground: 124 45 18;
+    --border: 251 191 36;
+    --input: 253 224 71;
+    --ring: 236 72 153;
+    --muted: 254 215 170;
+    --muted-foreground: 124 58 237;
+    --radius: 1rem;                   /* Bordes más redondeados */
+}
+
+.theme-ninos.mode-dark {
+    /* Modo Noche */
+    --primary: 244 114 182;
+    --primary-foreground: 255 255 255;
+    --secondary: 253 186 116;
+    --secondary-foreground: 26 26 46;
+    --accent: 74 222 128;
+    --accent-foreground: 26 26 46;
+    --background: 26 26 46;           /* Azul oscuro suave */
+    --foreground: 254 243 199;
+    --card: 46 46 76;
+    --card-foreground: 254 243 199;
+    --border: 82 82 122;
+    --input: 46 46 76;
+    --ring: 244 114 182;
+    --muted: 46 46 76;
+    --muted-foreground: 203 213 225;
+}
+
+/* ============================================
+   TEMA JÓVENES - Moderno y dinámico
+   ============================================ */
+
+.theme-jovenes {
+    /* Modo Día */
+    --primary: 59 130 246;            /* Azul moderno */
+    --primary-foreground: 255 255 255;
+    --secondary: 139 92 246;          /* Púrpura */
+    --secondary-foreground: 255 255 255;
+    --accent: 14 165 233;             /* Cyan */
+    --accent-foreground: 255 255 255;
+    --background: 248 250 252;        /* Gris muy claro */
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-foreground: 15 23 42;
+    --border: 226 232 240;
+    --input: 241 245 249;
+    --ring: 59 130 246;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
+    --radius: 0.5rem;
+}
+
+.theme-jovenes.mode-dark {
+    /* Modo Noche */
+    --primary: 96 165 250;
+    --primary-foreground: 15 23 42;
+    --secondary: 167 139 250;
+    --secondary-foreground: 15 23 42;
+    --accent: 56 189 248;
+    --accent-foreground: 15 23 42;
+    --background: 15 23 42;           /* Azul muy oscuro */
+    --foreground: 241 245 249;
+    --card: 30 41 59;
+    --card-foreground: 241 245 249;
+    --border: 51 65 85;
+    --input: 30 41 59;
+    --ring: 96 165 250;
+    --muted: 30 41 59;
+    --muted-foreground: 148 163 184;
+}
+
+/* ============================================
+   TEMA ADULTOS - Elegante y profesional
+   ============================================ */
+
+.theme-adultos {
+    /* Modo Día */
+    --primary: 71 85 105;             /* Gris azulado */
+    --primary-foreground: 255 255 255;
+    --secondary: 100 116 139;         /* Gris medio */
+    --secondary-foreground: 255 255 255;
+    --accent: 14 116 144;             /* Teal oscuro */
+    --accent-foreground: 255 255 255;
+    --background: 248 250 252;
+    --foreground: 30 41 59;
+    --card: 255 255 255;
+    --card-foreground: 30 41 59;
+    --border: 203 213 225;
+    --input: 241 245 249;
+    --ring: 71 85 105;
+    --muted: 248 250 252;
+    --muted-foreground: 100 116 139;
+    --radius: 0.25rem;                /* Bordes más cuadrados */
+}
+
+.theme-adultos.mode-dark {
+    /* Modo Noche */
+    --primary: 148 163 184;
+    --primary-foreground: 15 23 42;
+    --secondary: 100 116 139;
+    --secondary-foreground: 241 245 249;
+    --accent: 34 211 238;
+    --accent-foreground: 15 23 42;
+    --background: 30 30 30;           /* Gris muy oscuro */
+    --foreground: 241 245 249;
+    --card: 45 45 45;
+    --card-foreground: 241 245 249;
+    --border: 64 64 64;
+    --input: 45 45 45;
+    --ring: 148 163 184;
+    --muted: 45 45 45;
+    --muted-foreground: 148 163 184;
+}
+
+/* ============================================
+   CLASES UTILITARIAS
+   ============================================ */
+
+.bg-primary {
+    background-color: rgb(var(--primary));
+}
+
+.bg-secondary {
+    background-color: rgb(var(--secondary));
+}
+
+.bg-accent {
+    background-color: rgb(var(--accent));
+}
+
+.bg-background {
+    background-color: rgb(var(--background));
+}
+
+.bg-card {
+    background-color: rgb(var(--card));
+}
+
+.bg-muted {
+    background-color: rgb(var(--muted));
+}
+
+.text-primary {
+    color: rgb(var(--primary));
+}
+
+.text-secondary {
+    color: rgb(var(--secondary));
+}
+
+.text-accent {
+    color: rgb(var(--accent));
+}
+
+.text-foreground {
+    color: rgb(var(--foreground));
+}
+
+.text-muted-foreground {
+    color: rgb(var(--muted-foreground));
+}
+
+.border-border {
+    border-color: rgb(var(--border));
+}
+
+/* ============================================
+   TRANSICIONES SUAVES
+   ============================================ */
+
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ============================================
+   ANIMACIONES ESPECIALES PARA TEMA NIÑOS
+   ============================================ */
+
+.theme-ninos button {
+    transform: scale(1);
+    transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+.theme-ninos button:hover {
+    transform: scale(1.05);
+}
+
+.theme-ninos button:active {
+    transform: scale(0.95);
+}
+
+/* Animación de rebote para cards en tema niños */
+.theme-ninos .card:hover {
+    animation: bounce-small 0.5s ease;
+}
+
+@keyframes bounce-small {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* ============================================
+   EFECTOS PARA TEMA JÓVENES
+   ============================================ */
+
+.theme-jovenes button {
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-jovenes button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.theme-jovenes button:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* ============================================
+   ESTILO PROFESIONAL PARA TEMA ADULTOS
+   ============================================ */
+
+.theme-adultos {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.theme-adultos button {
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.theme-adultos button:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.theme-adultos .card {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
