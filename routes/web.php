@@ -44,9 +44,13 @@ Route::middleware('auth')->group(function () {
         
         // Boletos - CRUD
         Route::resource('boletos', \App\Http\Controllers\BoletoController::class);
+        Route::get('/boletos-buscar-cliente', [\App\Http\Controllers\BoletoController::class, 'buscarCliente'])->name('boletos.buscar-cliente');
+        Route::post('/boletos-registrar-cliente', [\App\Http\Controllers\BoletoController::class, 'registrarCliente'])->name('boletos.registrar-cliente');
         
         // Encomiendas - CRUD
         Route::resource('encomiendas', \App\Http\Controllers\EncomiendaController::class);
+        Route::get('/encomiendas-buscar-cliente', [\App\Http\Controllers\EncomiendaController::class, 'buscarCliente'])->name('encomiendas.buscar-cliente');
+        Route::post('/encomiendas-registrar-cliente', [\App\Http\Controllers\EncomiendaController::class, 'registrarCliente'])->name('encomiendas.registrar-cliente');
         
         // Ventas - Lista y detalle
         Route::resource('ventas', \App\Http\Controllers\VentaController::class);

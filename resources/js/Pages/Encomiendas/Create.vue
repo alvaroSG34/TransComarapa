@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuscadorCliente from '@/Components/BuscadorCliente.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
@@ -99,29 +100,20 @@ const submit = () => {
                                 </div>
                             </div>
 
-                            <!-- Selección de Cliente (Remitente) -->
+                            <!-- Selección de Cliente (Remitente) con Buscador -->
                             <div>
                                 <label for="cliente_id" class="block text-sm font-medium mb-2">
                                     Cliente Remitente *
                                 </label>
-                                <select
-                                    id="cliente_id"
+                                <BuscadorCliente
                                     v-model="form.cliente_id"
-                                    required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
-                                    :class="{ 'border-red-500': form.errors.cliente_id }"
-                                >
-                                    <option value="">Seleccione el cliente que envía</option>
-                                    <option v-for="cliente in clientes" :key="cliente.id" :value="cliente.id">
-                                        {{ cliente.nombre }} {{ cliente.apellido }} - CI: {{ cliente.ci }} - {{ cliente.telefono }}
-                                    </option>
-                                </select>
-                                <p v-if="form.errors.cliente_id" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.cliente_id }}
-                                </p>
-                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                    Persona que envía el paquete
+                                    :required="true"
+                                    :error="form.errors.cliente_id"
+                                    endpoint="/encomiendas-buscar-cliente"
+                                    registro-endpoint="/encomiendas-registrar-cliente"
+                                />
+                                <p v-if="!form.errors.cliente_id" class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Persona que envía el paquete. Puede buscar o registrar nuevo cliente.
                                 </p>
                             </div>
 

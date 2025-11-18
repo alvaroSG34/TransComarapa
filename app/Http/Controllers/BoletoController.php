@@ -294,4 +294,75 @@ class BoletoController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
+
+    /**
+     * Buscar clientes por CI, nombre, apellido o teléfono
+     */
+    public function buscarCliente(Request $request)
+    {
+        $query = $request->input('q', '');
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $clientes = DB::table('usuarios')
+            ->where('rol', 'Cliente')
+            ->where(function($q) use ($query) {
+                $q->where('ci', 'LIKE', "%{$query}%")
+                  ->orWhere('nombre', 'LIKE', "%{$query}%")
+                  ->orWhere('apellido', 'LIKE', "%{$query}%")
+                  ->orWhere('telefono', 'LIKE', "%{$query}%");
+            })
+            ->select('id', 'nombre', 'apellido', 'ci', 'telefono', 'correo')
+            ->limit(10)
+            ->get();
+
+        return response()->json($clientes);
+    }
+
+    /**
+     * Registro rápido de cliente desde el formulario
+     */
+    public function registrarCliente(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:100',
+            'apellido' => 'required|string|max:100',
+            'ci' => 'required|string|max:20|unique:usuarios,ci',
+            'telefono' => 'required|string|max:20',
+            'correo' => 'nullable|email|max:100|unique:usuarios,correo'
+        ]);
+
+        try {
+            $clienteId = DB::table('usuarios')->insertGetId([
+                'nombre' => $validated['nombre'],
+                'apellido' => $validated['apellido'],
+                'ci' => $validated['ci'],
+                'telefono' => $validated['telefono'],
+                'correo' => $validated['correo'] ?? null,
+                'password' => bcrypt($validated['ci']), // Password = CI
+                'rol' => 'Cliente',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            $cliente = DB::table('usuarios')
+                ->where('id', $clienteId)
+                ->select('id', 'nombre', 'apellido', 'ci', 'telefono', 'correo')
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'cliente' => $cliente,
+                'message' => 'Cliente registrado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar cliente: ' . $e->getMessage()
+            ], 422);
+        }
+    }
 }
