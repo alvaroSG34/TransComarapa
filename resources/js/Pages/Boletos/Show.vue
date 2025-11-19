@@ -1,13 +1,53 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     boleto: Object
 });
 
+const verificando = ref(false);
+const mostrarModalQr = ref(false);
+
 const imprimirComprobante = () => {
     window.print();
+};
+
+const verificarEstadoPago = async () => {
+    if (verificando.value) return;
+    
+    verificando.value = true;
+    
+    try {
+        const response = await axios.post(route('boletos.verificar-estado', props.boleto.id));
+        
+        if (response.data.success) {
+            if (response.data.pagado) {
+                alert('¡El pago ha sido confirmado exitosamente!');
+                // Recargar la página para actualizar el estado
+                router.reload({ only: ['boleto'], preserveScroll: false });
+            } else {
+                alert('El pago aún está pendiente. El cliente debe completar el pago escaneando el QR.');
+            }
+        } else {
+            alert('Error: ' + (response.data.error || 'Error desconocido'));
+        }
+    } catch (error) {
+        console.error('Error al verificar estado:', error);
+        alert('Error al verificar estado: ' + (error.response?.data?.error || error.message || 'Error desconocido'));
+    } finally {
+        verificando.value = false;
+    }
+};
+
+const abrirModalQr = () => {
+    mostrarModalQr.value = true;
+};
+
+const cerrarModalQr = () => {
+    mostrarModalQr.value = false;
 };
 </script>
 
@@ -113,6 +153,58 @@ const imprimirComprobante = () => {
                                     >
                                         {{ boleto.estado_pago }}
                                     </span>
+                                    <div v-if="boleto.metodo_pago === 'QR'" class="mt-2">
+                                        <span class="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">
+                                            Método: QR
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Código QR de Pago (si está pendiente y tiene QR) -->
+                        <div v-if="boleto.estado_pago === 'pendiente' && boleto.metodo_pago === 'QR' && boleto.qr_base64" class="mb-6">
+                            <h3 class="text-lg font-semibold mb-3" style="color: var(--text-primary)">Código QR de Pago</h3>
+                            <div class="p-6 rounded-lg border-2" style="background-color: var(--card-bg); border-color: var(--border-color)">
+                                <div class="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                                    <!-- QR Image -->
+                                    <div class="flex-shrink-0">
+                                        <img 
+                                            :src="`data:image/png;base64,${boleto.qr_base64}`" 
+                                            alt="Código QR de Pago"
+                                            class="w-48 h-48 border-2 rounded-lg shadow-lg"
+                                            style="border-color: var(--border-color);"
+                                        />
+                                    </div>
+                                    
+                                    <!-- Información y Acciones -->
+                                    <div class="flex-1 text-center md:text-left">
+                                        <div class="mb-4">
+                                            <p class="text-sm mb-2" style="color: var(--text-secondary)">
+                                                <strong>Instrucciones:</strong> El cliente debe escanear este código QR con su aplicación de pago móvil para completar la transacción.
+                                            </p>
+                                            <p class="text-xs mt-2" style="color: var(--text-secondary)">
+                                                ID de Transacción: <span class="font-mono">{{ boleto.transaction_id || 'N/A' }}</span>
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="p-3 rounded-lg bg-blue-50 border border-blue-200 mb-4">
+                                            <p class="text-xs text-blue-800">
+                                                <strong>Nota:</strong> Después de que el cliente pague, haz click en "Verificar Estado" para confirmar el pago automáticamente.
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="flex gap-2 justify-center md:justify-start">
+                                            <button
+                                                @click="verificarEstadoPago"
+                                                :disabled="verificando"
+                                                class="px-4 py-2 rounded-md text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                                                :class="{ 'opacity-50 cursor-not-allowed': verificando }"
+                                            >
+                                                {{ verificando ? 'Verificando...' : 'Verificar Estado' }}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -129,6 +221,18 @@ const imprimirComprobante = () => {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                 </svg>
                                 Imprimir Comprobante
+                            </button>
+
+                            <button
+                                v-if="boleto.qr_base64 && boleto.metodo_pago === 'QR'"
+                                @click="abrirModalQr"
+                                type="button"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                </svg>
+                                Mostrar QR
                             </button>
 
                             <a
@@ -149,6 +253,57 @@ const imprimirComprobante = () => {
                                 </svg>
                                 Editar
                             </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Grande para Mostrar QR -->
+        <div 
+            v-if="mostrarModalQr" 
+            class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            @click.self="cerrarModalQr"
+        >
+            <div 
+                class="bg-white rounded-lg shadow-2xl max-w-2xl w-full relative"
+                style="background-color: var(--card-bg)"
+            >
+                <!-- Botón Cerrar -->
+                <button
+                    @click="cerrarModalQr"
+                    class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                    style="color: var(--text-secondary)"
+                >
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Contenido del Modal -->
+                <div class="p-8">
+                    <div class="text-center">
+                        <h3 class="text-2xl font-bold mb-6" style="color: var(--text-primary)">
+                            Código QR de Pago
+                        </h3>
+                        
+                        <div class="flex justify-center mb-6">
+                            <img
+                                v-if="boleto.qr_base64"
+                                :src="`data:image/png;base64,${boleto.qr_base64}`"
+                                alt="Código QR de Pago"
+                                class="border-4 rounded-lg shadow-xl"
+                                style="border-color: var(--border-color); max-width: 500px; width: 100%; height: auto;"
+                            />
+                        </div>
+
+                        <div class="mt-6">
+                            <button
+                                @click="cerrarModalQr"
+                                class="px-6 py-3 rounded-md text-base font-medium text-white bg-gray-600 hover:bg-gray-700 transition-colors"
+                            >
+                                Cerrar
+                            </button>
                         </div>
                     </div>
                 </div>

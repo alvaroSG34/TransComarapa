@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'pagofacil' => [
+        'api_url' => env('PAGOFACIL_API_URL', 'https://masterqr.pagofacil.com.bo/api/services/v2/generate-qr'),
+        'query_url' => env('PAGOFACIL_QUERY_URL', 'https://masterqr.pagofacil.com.bo/api/services/v2/query-transaction'),
+        'api_token' => env('PAGOFACIL_API_TOKEN'),
+        'client_code_prefix' => env('PAGOFACIL_CLIENT_CODE_PREFIX', 'Grupo04SA'),
+        'callback_url' => env('PAGOFACIL_CALLBACK_URL', 'https://tu-dominio.com/api/pagofacil/callback'),
+    ],
+
 ];

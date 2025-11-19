@@ -1,14 +1,16 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BuscadorCliente from '@/Components/BuscadorCliente.vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import { ref, computed, watch } from 'vue';
+import { Head, useForm, router } from '@inertiajs/vue3';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
 import axios from 'axios';
 
 const props = defineProps({
     viajes: Array,
-    clientes: Array
+    clientes: Array,
+    qr_data: Object,
+    success: String
 });
 
 useHtml5Validation();
@@ -16,8 +18,14 @@ useHtml5Validation();
 const form = useForm({
     viaje_id: '',
     cliente_id: '',
-    asiento: ''
+    asiento: '',
+    metodo_pago: ''
 });
+
+const mostrarModalQr = ref(false);
+const qrData = ref(null);
+const errorQr = ref(null);
+const reintentando = ref(false);
 
 const viajeSeleccionado = computed(() => {
     return props.viajes.find(v => v.id === parseInt(form.viaje_id));
@@ -44,9 +52,66 @@ watch(() => form.viaje_id, async (viajeId) => {
 
 const submit = () => {
     form.post(route('boletos.store'), {
-        preserveScroll: true
+        preserveScroll: true,
+        onSuccess: (page) => {
+            // Si hay datos de QR en las props, mostrar modal
+            if (page.props.qr_data) {
+                qrData.value = page.props.qr_data;
+                mostrarModalQr.value = true;
+                errorQr.value = null;
+            }
+        },
+        onError: (errors) => {
+            // Si hay error específico de QR, mostrar en modal
+            if (errors.qr_error) {
+                errorQr.value = errors.qr_error;
+                mostrarModalQr.value = true;
+            }
+        }
     });
 };
+
+const reintentarGenerarQr = async () => {
+    if (!qrData.value?.boleto_id) return;
+    
+    reintentando.value = true;
+    errorQr.value = null;
+    
+    try {
+        const response = await axios.post(route('boletos.reintentar-qr', qrData.value.boleto_id));
+        
+        if (response.data?.qr_data) {
+            qrData.value = response.data.qr_data;
+        } else if (response.data?.flash?.qr_data) {
+            qrData.value = response.data.flash.qr_data;
+        }
+        
+        // Recargar página para obtener datos actualizados
+        router.reload({ only: [] });
+    } catch (error) {
+        errorQr.value = error.response?.data?.message || 'Error al reintentar generación de QR';
+    } finally {
+        reintentando.value = false;
+    }
+};
+
+const cerrarModal = () => {
+    mostrarModalQr.value = false;
+    qrData.value = null;
+    errorQr.value = null;
+    // Redirigir a index después de cerrar
+    router.visit(route('boletos.index'));
+};
+
+// Verificar si hay datos de QR en las props al cargar
+onMounted(() => {
+    // Si hay datos de QR en las props, mostrar modal
+    if (props.qr_data) {
+        qrData.value = props.qr_data;
+        mostrarModalQr.value = true;
+        errorQr.value = null;
+    }
+});
 
 const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleString('es-BO', {
@@ -170,6 +235,31 @@ const asientosDisponiblesArray = computed(() => {
                                 </p>
                             </div>
 
+                            <!-- Selección de Método de Pago -->
+                            <div>
+                                <label for="metodo_pago" class="block text-sm font-medium mb-2">
+                                    Método de Pago *
+                                </label>
+                                <select
+                                    id="metodo_pago"
+                                    v-model="form.metodo_pago"
+                                    required
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                    :class="{ 'border-red-500': form.errors.metodo_pago }"
+                                >
+                                    <option value="">Seleccione método de pago</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="QR">QR (PagoFácil)</option>
+                                </select>
+                                <p v-if="form.errors.metodo_pago" class="mt-1 text-sm text-red-600">
+                                    {{ form.errors.metodo_pago }}
+                                </p>
+                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Seleccione cómo el cliente realizará el pago
+                                </p>
+                            </div>
+
                             <!-- Selección de Asiento -->
                             <div>
                                 <label for="asiento" class="block text-sm font-medium mb-2">
@@ -283,6 +373,83 @@ const asientosDisponiblesArray = computed(() => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para mostrar QR -->
+        <div v-if="mostrarModalQr" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="background-color: var(--card-bg)">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold" style="color: var(--text-primary)">
+                            {{ qrData ? 'Código QR de Pago' : 'Error al Generar QR' }}
+                        </h3>
+                        <button
+                            @click="cerrarModal"
+                            class="text-gray-400 hover:text-gray-600"
+                            style="color: var(--text-secondary)"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Si hay QR -->
+                    <div v-if="qrData && qrData.qr_base64" class="text-center">
+                        <div class="mb-4">
+                            <img 
+                                :src="`data:image/png;base64,${qrData.qr_base64}`" 
+                                alt="Código QR de Pago"
+                                class="mx-auto border-2 rounded-lg"
+                                style="border-color: var(--border-color); max-width: 300px;"
+                            />
+                        </div>
+                        <p class="text-sm mb-4" style="color: var(--text-secondary)">
+                            El cliente debe escanear este código QR para realizar el pago.
+                        </p>
+                        <p class="text-xs mb-4" style="color: var(--text-secondary)">
+                            ID de Transacción: {{ qrData.transaction_id || 'N/A' }}
+                        </p>
+                        <div class="flex gap-2 justify-center">
+                            <button
+                                @click="cerrarModal"
+                                class="px-4 py-2 rounded-md text-sm font-medium"
+                                style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Si hay error -->
+                    <div v-else-if="errorQr" class="text-center">
+                        <div class="mb-4">
+                            <svg class="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-red-600 mb-4">{{ errorQr }}</p>
+                        <div class="flex gap-2 justify-center">
+                            <button
+                                @click="reintentarGenerarQr"
+                                :disabled="reintentando"
+                                class="px-4 py-2 rounded-md text-sm font-medium"
+                                style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                                :class="{ 'opacity-50 cursor-not-allowed': reintentando }"
+                            >
+                                {{ reintentando ? 'Reintentando...' : 'Reintentar' }}
+                            </button>
+                            <button
+                                @click="cerrarModal"
+                                class="px-4 py-2 rounded-md text-sm font-medium"
+                                style="background-color: var(--button-secondary-bg); color: var(--button-secondary-text)"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

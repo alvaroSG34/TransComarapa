@@ -90,7 +90,7 @@ class PagoService
                 'num_cuota' => $i,
                 'monto' => $monto,
                 'metodo_pago' => $metodoPago,
-                'estado_pago' => 'pendiente',
+                'estado_pago' => 'Pendiente',
             ];
         }
 

@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Repositories\Contracts\ViajeRepositoryInterface;
 use App\Repositories\Contracts\UsuarioRepositoryInterface;
 use App\Services\VentaService;
+use App\Services\PagoFacilService;
+use App\Services\PagoService;
+use App\Models\PagoVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -15,15 +18,21 @@ class BoletoController extends Controller
     protected $viajeRepository;
     protected $usuarioRepository;
     protected $ventaService;
+    protected $pagoFacilService;
+    protected $pagoService;
 
     public function __construct(
         ViajeRepositoryInterface $viajeRepository,
         UsuarioRepositoryInterface $usuarioRepository,
-        VentaService $ventaService
+        VentaService $ventaService,
+        PagoFacilService $pagoFacilService,
+        PagoService $pagoService
     ) {
         $this->viajeRepository = $viajeRepository;
         $this->usuarioRepository = $usuarioRepository;
         $this->ventaService = $ventaService;
+        $this->pagoFacilService = $pagoFacilService;
+        $this->pagoService = $pagoService;
     }
 
     /**
@@ -36,6 +45,10 @@ class BoletoController extends Controller
             ->join('rutas', 'viajes.ruta_id', '=', 'rutas.id')
             ->join('ventas', 'boletos.venta_id', '=', 'ventas.id')
             ->join('usuarios', 'ventas.usuario_id', '=', 'usuarios.id')
+            ->leftJoin('pago_ventas', function($join) {
+                $join->on('ventas.id', '=', 'pago_ventas.venta_id')
+                     ->where('pago_ventas.num_cuota', '=', 1); // Solo la primera cuota
+            })
             ->select(
                 'boletos.*',
                 'viajes.fecha_salida',
@@ -48,7 +61,12 @@ class BoletoController extends Controller
                 'usuarios.ci as cliente_ci',
                 'ventas.estado_pago',
                 'ventas.monto_total',
-                'ventas.created_at as fecha_venta'
+                'ventas.created_at as fecha_venta',
+                DB::raw('COALESCE(pago_ventas.metodo_pago, NULL) as metodo_pago'),
+                DB::raw('COALESCE(pago_ventas.qr_base64, NULL) as qr_base64'),
+                DB::raw('COALESCE(pago_ventas.transaction_id, NULL) as transaction_id'),
+                DB::raw('COALESCE(pago_ventas.payment_method_transaction_id, NULL) as payment_method_transaction_id'),
+                DB::raw('COALESCE(pago_ventas.estado_pago, NULL) as pago_estado')
             );
 
         // Filtros
@@ -133,60 +151,125 @@ class BoletoController extends Controller
             'viaje_id' => 'required|exists:viajes,id',
             'cliente_id' => 'required|exists:usuarios,id',
             'asiento' => 'required|integer|min:1',
+            'metodo_pago' => 'required|in:Efectivo,QR',
         ]);
 
-        try {
-            // Verificar que el viaje esté disponible
-            $viaje = $this->viajeRepository->find($validated['viaje_id']);
-            
-            if (!$viaje || $viaje->estado !== 'programado') {
-                throw new \Exception('El viaje no está disponible para venta.');
-            }
+        return DB::transaction(function () use ($validated) {
+            try {
+                // Verificar que el viaje esté disponible
+                $viaje = $this->viajeRepository->find($validated['viaje_id']);
+                
+                if (!$viaje || $viaje->estado !== 'programado') {
+                    throw new \Exception('El viaje no está disponible para venta.');
+                }
 
-            // Verificar asientos disponibles
-            $boletosVendidos = DB::table('boletos')
-                ->where('viaje_id', $viaje->id)
-                ->count();
-            
-            if ($boletosVendidos >= $viaje->asientos_totales) {
-                throw new \Exception('No hay asientos disponibles en este viaje.');
-            }
+                // Verificar asientos disponibles
+                $boletosVendidos = DB::table('boletos')
+                    ->where('viaje_id', $viaje->id)
+                    ->count();
+                
+                if ($boletosVendidos >= $viaje->asientos_totales) {
+                    throw new \Exception('No hay asientos disponibles en este viaje.');
+                }
 
-            // Verificar que el asiento no esté ocupado
-            $asientoOcupado = DB::table('boletos')
-                ->where('viaje_id', $viaje->id)
-                ->where('asiento', $validated['asiento'])
-                ->exists();
+                // Verificar que el asiento no esté ocupado
+                $asientoOcupado = DB::table('boletos')
+                    ->where('viaje_id', $viaje->id)
+                    ->where('asiento', $validated['asiento'])
+                    ->exists();
 
-            if ($asientoOcupado) {
-                throw new \Exception('El asiento número ' . $validated['asiento'] . ' ya está ocupado.');
-            }
+                if ($asientoOcupado) {
+                    throw new \Exception('El asiento número ' . $validated['asiento'] . ' ya está ocupado.');
+                }
 
-            // Crear venta usando el servicio
-            $ventaData = [
-                'fecha' => now(),
-                'monto_total' => $viaje->precio,
-                'usuario_id' => $validated['cliente_id'],
-                'vehiculo_id' => $viaje->vehiculo_id,
-                'boletos' => [
-                    [
-                        'asiento' => $validated['asiento'],
-                        'ruta_id' => $viaje->ruta_id,
-                        'viaje_id' => $viaje->id
+                // Crear venta usando el servicio
+                $ventaData = [
+                    'fecha' => now(),
+                    'monto_total' => $viaje->precio,
+                    'usuario_id' => $validated['cliente_id'],
+                    'vehiculo_id' => $viaje->vehiculo_id,
+                    'boletos' => [
+                        [
+                            'asiento' => $validated['asiento'],
+                            'ruta_id' => $viaje->ruta_id,
+                            'viaje_id' => $viaje->id
+                        ]
                     ]
-                ]
-            ];
+                ];
 
-            $this->ventaService->crearVentaBoleto($ventaData);
+                $venta = $this->ventaService->crearVentaBoleto($ventaData);
 
-            return redirect()->route('boletos.index')
-                ->with('success', 'Boleto vendido exitosamente.');
+                // Si el método de pago es QR, generar QR
+                if ($validated['metodo_pago'] === 'QR') {
+                    // Crear PagoVenta
+                    $pagoVenta = $this->pagoService->crearPago([
+                        'venta_id' => $venta->id,
+                        'num_cuota' => 1,
+                        'monto' => $venta->monto_total,
+                        'metodo_pago' => 'QR',
+                        'estado_pago' => 'Pendiente',
+                    ]);
 
-        } catch (\Exception $e) {
-            return back()
-                ->withInput()
-                ->with('error', $e->getMessage());
-        }
+                    // Generar QR
+                    $resultadoQr = $this->pagoFacilService->generarQr($pagoVenta);
+
+                    if (!$resultadoQr['success']) {
+                        throw new \Exception('Error al generar QR: ' . ($resultadoQr['error'] ?? 'Error desconocido'));
+                    }
+
+                    // Obtener datos del viaje y cliente para re-renderizar la vista
+                    $viajesDisponibles = DB::table('viajes')
+                        ->join('rutas', 'viajes.ruta_id', '=', 'rutas.id')
+                        ->join('vehiculos', 'viajes.vehiculo_id', '=', 'vehiculos.id')
+                        ->select(
+                            'viajes.*',
+                            'rutas.nombre as ruta_nombre',
+                            'rutas.origen',
+                            'rutas.destino',
+                            'vehiculos.placa as vehiculo_placa'
+                        )
+                        ->where('viajes.estado', 'programado')
+                        ->where('viajes.fecha_salida', '>', now())
+                        ->orderBy('viajes.fecha_salida', 'asc')
+                        ->get()
+                        ->map(function ($viaje) {
+                            $boletosVendidos = DB::table('boletos')
+                                ->where('viaje_id', $viaje->id)
+                                ->count();
+                            
+                            $viaje->asientos_disponibles = $viaje->asientos_totales - $boletosVendidos;
+                            $viaje->tiene_asientos = $viaje->asientos_disponibles > 0;
+                            
+                            return $viaje;
+                        })
+                        ->filter(function ($viaje) {
+                            return $viaje->tiene_asientos;
+                        })
+                        ->values();
+
+                    $clientes = $this->usuarioRepository->findByRol('Cliente');
+
+                    // Retornar a Create con datos del QR
+                    return Inertia::render('Boletos/Create', [
+                        'viajes' => $viajesDisponibles,
+                        'clientes' => $clientes,
+                        'qr_data' => [
+                            'qr_base64' => $resultadoQr['pago_venta']->qr_base64,
+                            'transaction_id' => $resultadoQr['pago_venta']->transaction_id,
+                            'boleto_id' => $venta->boletos->first()->id,
+                        ],
+                        'success' => 'Boleto creado exitosamente. QR generado.'
+                    ]);
+                }
+
+                // Si es Efectivo, redirigir normalmente
+                return redirect()->route('boletos.index')
+                    ->with('success', 'Boleto vendido exitosamente.');
+
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        });
     }
 
     /**
@@ -200,6 +283,10 @@ class BoletoController extends Controller
             ->join('vehiculos', 'viajes.vehiculo_id', '=', 'vehiculos.id')
             ->join('ventas', 'boletos.venta_id', '=', 'ventas.id')
             ->join('usuarios', 'ventas.usuario_id', '=', 'usuarios.id')
+            ->leftJoin('pago_ventas', function($join) {
+                $join->on('ventas.id', '=', 'pago_ventas.venta_id')
+                     ->where('pago_ventas.num_cuota', '=', 1);
+            })
             ->select(
                 'boletos.*',
                 'viajes.fecha_salida',
@@ -219,7 +306,12 @@ class BoletoController extends Controller
                 'usuarios.correo as cliente_correo',
                 'ventas.estado_pago',
                 'ventas.monto_total',
-                'ventas.created_at as fecha_venta'
+                'ventas.created_at as fecha_venta',
+                'pago_ventas.metodo_pago',
+                'pago_ventas.qr_base64',
+                'pago_ventas.transaction_id',
+                'pago_ventas.payment_method_transaction_id',
+                'pago_ventas.estado_pago as pago_estado'
             )
             ->where('boletos.id', $id)
             ->first();
@@ -402,5 +494,125 @@ class BoletoController extends Controller
             ->pluck('asiento');
             
         return response()->json($asientos);
+    }
+
+    /**
+     * Verificar estado del pago QR
+     */
+    public function verificarEstadoPago(string $id)
+    {
+        try {
+            $boleto = DB::table('boletos')->where('id', $id)->first();
+            
+            if (!$boleto) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Boleto no encontrado.'
+                ], 404);
+            }
+
+            $pagoVenta = PagoVenta::where('venta_id', $boleto->venta_id)
+                ->where('metodo_pago', 'QR')
+                ->first();
+
+            if (!$pagoVenta) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se encontró pago QR para este boleto.'
+                ], 404);
+            }
+
+            // Consultar estado en PagoFácil
+            $resultado = $this->pagoFacilService->consultarEstadoPago($pagoVenta);
+
+            if (!$resultado['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $resultado['error'] ?? 'Error al consultar estado'
+                ], 500);
+            }
+
+            // Verificar si el pago fue completado
+            // paymentStatus: 1 o 5 = Pagado exitosamente, otro valor = Aún no pagado
+            $estadoPagoFacil = $resultado['data']['values']['paymentStatus'] ?? null;
+            
+            // Si el estado es 1 o 5 (pagado), actualizar en BD
+            if ($estadoPagoFacil == 1 || $estadoPagoFacil == 5) {
+                DB::table('pago_ventas')
+                    ->where('id', $pagoVenta->id)
+                    ->update([
+                        'estado_pago' => 'pagado',
+                        'fecha_pago' => now(),
+                        'updated_at' => now()
+                    ]);
+
+                DB::table('ventas')
+                    ->where('id', $boleto->venta_id)
+                    ->update([
+                        'estado_pago' => 'Pagado',
+                        'updated_at' => now()
+                    ]);
+
+                return response()->json([
+                    'success' => true,
+                    'pagado' => true,
+                    'message' => 'El pago ha sido confirmado exitosamente.'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'pagado' => false,
+                'message' => 'El pago aún está pendiente.',
+                'estado' => $estadoPagoFacil
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al verificar estado: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reintentar generación de QR
+     */
+    public function reintentarQr(string $id)
+    {
+        try {
+            $boleto = DB::table('boletos')->where('id', $id)->first();
+            
+            if (!$boleto) {
+                return back()->with('error', 'Boleto no encontrado.');
+            }
+
+            $pagoVenta = PagoVenta::where('venta_id', $boleto->venta_id)
+                ->where('metodo_pago', 'QR')
+                ->first();
+
+            if (!$pagoVenta) {
+                return back()->with('error', 'No se encontró pago QR para este boleto.');
+            }
+
+            // Generar QR nuevamente
+            $resultadoQr = $this->pagoFacilService->generarQr($pagoVenta);
+
+            if (!$resultadoQr['success']) {
+                return back()->with('error', 'Error al generar QR: ' . ($resultadoQr['error'] ?? 'Error desconocido'));
+            }
+
+            return back()->with([
+                'success' => 'QR regenerado exitosamente.',
+                'qr_data' => [
+                    'qr_base64' => $resultadoQr['pago_venta']->qr_base64,
+                    'transaction_id' => $resultadoQr['pago_venta']->transaction_id,
+                    'boleto_id' => $id,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al reintentar QR: ' . $e->getMessage());
+        }
     }
 }

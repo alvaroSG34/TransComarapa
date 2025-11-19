@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     boletos: Array,
@@ -48,6 +49,7 @@ const marcarPagado = (id) => {
         });
     }
 };
+
 
 const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleString('es-BO', {
@@ -230,6 +232,11 @@ const getEstadoPagoColor = (estado) => {
                                             <span :class="getEstadoPagoColor(boleto.estado_pago)" class="px-2 py-1 text-xs rounded-full font-medium">
                                                 {{ boleto.estado_pago }}
                                             </span>
+                                            <div v-if="boleto.metodo_pago === 'QR'" class="mt-1">
+                                                <span class="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">
+                                                    QR
+                                                </span>
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                                             <a
@@ -238,8 +245,9 @@ const getEstadoPagoColor = (estado) => {
                                             >
                                                 Ver
                                             </a>
+                                            <!-- Botón Marcar Pagado - Solo para Efectivo -->
                                             <button
-                                                v-if="boleto.estado_pago === 'Pendiente'"
+                                                v-if="boleto.estado_pago === 'Pendiente' && boleto.metodo_pago !== 'QR'"
                                                 @click="marcarPagado(boleto.id)"
                                                 class="inline-block px-3 py-1 rounded text-sm text-green-600 hover:text-green-800 font-medium"
                                             >

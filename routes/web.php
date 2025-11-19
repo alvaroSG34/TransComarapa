@@ -48,6 +48,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/boletos-buscar-cliente', [\App\Http\Controllers\BoletoController::class, 'buscarCliente'])->name('boletos.buscar-cliente');
         Route::post('/boletos-registrar-cliente', [\App\Http\Controllers\BoletoController::class, 'registrarCliente'])->name('boletos.registrar-cliente');
         Route::get('/boletos/viaje/{id}/asientos-ocupados', [\App\Http\Controllers\BoletoController::class, 'obtenerAsientosOcupados'])->name('boletos.asientos-ocupados');
+        Route::post('/boletos/{id}/verificar-estado', [\App\Http\Controllers\BoletoController::class, 'verificarEstadoPago'])->name('boletos.verificar-estado');
+        Route::post('/boletos/{id}/reintentar-qr', [\App\Http\Controllers\BoletoController::class, 'reintentarQr'])->name('boletos.reintentar-qr');
         
         // Encomiendas - CRUD
         Route::resource('encomiendas', \App\Http\Controllers\EncomiendaController::class);

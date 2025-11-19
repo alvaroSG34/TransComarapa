@@ -18,6 +18,8 @@ class PagoVenta extends Model
         'monto',
         'metodo_pago',
         'qr_base64',
+        'transaction_id',
+        'payment_method_transaction_id',
         'estado_pago',
     ];
 
