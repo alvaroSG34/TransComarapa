@@ -102,7 +102,7 @@ const getEstadoBadgeClass = (estado) => {
                                             Bs {{ viaje.precio }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
-                                            {{ viaje.asientos_disponibles }} / {{ viaje.asientos_totales }}
+                                            {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getEstadoBadgeClass(viaje.estado)">
@@ -140,7 +140,7 @@ const getEstadoBadgeClass = (estado) => {
                                                     Editar
                                                 </Link>
                                                 <button
-                                                    v-if="viaje.estado === 'programado' && viaje.asientos_disponibles === viaje.asientos_totales"
+                                                    v-if="viaje.estado === 'programado' && (viaje.boletos_count || 0) === 0"
                                                     @click="deleteViaje(viaje.id)"
                                                     class="px-3 py-1 rounded text-white transition-all hover:opacity-80"
                                                     style="background-color: #dc2626;"

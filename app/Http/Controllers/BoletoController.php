@@ -47,6 +47,7 @@ class BoletoController extends Controller
                 'usuarios.apellido as cliente_apellido',
                 'usuarios.ci as cliente_ci',
                 'ventas.estado_pago',
+                'ventas.monto_total',
                 'ventas.created_at as fecha_venta'
             );
 
@@ -135,8 +136,6 @@ class BoletoController extends Controller
         ]);
 
         try {
-            DB::beginTransaction();
-
             // Verificar que el viaje esté disponible
             $viaje = $this->viajeRepository->find($validated['viaje_id']);
             
@@ -164,31 +163,26 @@ class BoletoController extends Controller
             }
 
             // Crear venta usando el servicio
-            $venta = $this->ventaService->crearVenta([
-                'usuario_id' => $validated['cliente_id'],
+            $ventaData = [
+                'fecha' => now(),
                 'monto_total' => $viaje->precio,
-                'tipo' => 'Boleto',
-                'estado_pago' => 'Pendiente'
-            ]);
+                'usuario_id' => $validated['cliente_id'],
+                'vehiculo_id' => $viaje->vehiculo_id,
+                'boletos' => [
+                    [
+                        'asiento' => $validated['asiento'],
+                        'ruta_id' => $viaje->ruta_id,
+                        'viaje_id' => $viaje->id
+                    ]
+                ]
+            ];
 
-            // Crear boleto
-            DB::table('boletos')->insert([
-                'viaje_id' => $viaje->id,
-                'asiento' => $validated['asiento'],
-                'venta_id' => $venta->id,
-                'ruta_id' => $viaje->ruta_id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            DB::commit();
+            $this->ventaService->crearVentaBoleto($ventaData);
 
             return redirect()->route('boletos.index')
                 ->with('success', 'Boleto vendido exitosamente.');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return back()
                 ->withInput()
                 ->with('error', $e->getMessage());
@@ -294,6 +288,38 @@ class BoletoController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
+    
+    /**
+     * Marcar boleto como pagado
+     */
+    public function marcarPagado(string $id)
+    {
+        try {
+            $boleto = DB::table('boletos')->where('id', $id)->first();
+            
+            if (!$boleto) {
+                return back()->with('error', 'Boleto no encontrado.');
+            }
+
+            $venta = DB::table('ventas')->where('id', $boleto->venta_id)->first();
+            
+            if ($venta->estado_pago === 'Pagado') {
+                return back()->with('info', 'El boleto ya está pagado.');
+            }
+            
+            DB::table('ventas')
+                ->where('id', $boleto->venta_id)
+                ->update([
+                    'estado_pago' => 'Pagado',
+                    'updated_at' => now()
+                ]);
+                
+            return back()->with('success', 'Boleto marcado como pagado exitosamente.');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al actualizar el estado: ' . $e->getMessage());
+        }
+    }
 
     /**
      * Buscar clientes por CI, nombre, apellido o teléfono
@@ -310,9 +336,9 @@ class BoletoController extends Controller
             ->where('rol', 'Cliente')
             ->where(function($q) use ($query) {
                 $q->where('ci', 'LIKE', "%{$query}%")
-                  ->orWhere('nombre', 'LIKE', "%{$query}%")
-                  ->orWhere('apellido', 'LIKE', "%{$query}%")
-                  ->orWhere('telefono', 'LIKE', "%{$query}%");
+                    ->orWhere('nombre', 'LIKE', "%{$query}%")
+                    ->orWhere('apellido', 'LIKE', "%{$query}%")
+                    ->orWhere('telefono', 'LIKE', "%{$query}%");
             })
             ->select('id', 'nombre', 'apellido', 'ci', 'telefono', 'correo')
             ->limit(10)
@@ -364,5 +390,17 @@ class BoletoController extends Controller
                 'message' => 'Error al registrar cliente: ' . $e->getMessage()
             ], 422);
         }
+    }
+
+    /**
+     * Obtener asientos ocupados para un viaje específico
+     */
+    public function obtenerAsientosOcupados(string $viajeId)
+    {
+        $asientos = DB::table('boletos')
+            ->where('viaje_id', $viajeId)
+            ->pluck('asiento');
+            
+        return response()->json($asientos);
     }
 }

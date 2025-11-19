@@ -4,6 +4,7 @@ import BuscadorCliente from '@/Components/BuscadorCliente.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
+import axios from 'axios';
 
 const props = defineProps({
     viajes: Array,
@@ -27,8 +28,15 @@ const asientosOcupados = ref([]);
 // Cuando se selecciona un viaje, obtener asientos ocupados
 watch(() => form.viaje_id, async (viajeId) => {
     if (viajeId) {
-        // Aquí deberías hacer una petición al backend para obtener los asientos ocupados
-        // Por ahora, lo dejamos vacío y se validará en el backend
+        try {
+            const response = await axios.get(route('boletos.asientos-ocupados', viajeId));
+            asientosOcupados.value = response.data.map(a => parseInt(a));
+        } catch (error) {
+            console.error('Error al cargar asientos ocupados:', error);
+            asientosOcupados.value = [];
+        }
+        form.asiento = '';
+    } else {
         asientosOcupados.value = [];
         form.asiento = '';
     }

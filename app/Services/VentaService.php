@@ -26,8 +26,8 @@ class VentaService
             $venta = $this->ventaRepository->create([
                 'fecha' => $data['fecha'],
                 'monto_total' => $data['monto_total'],
-                'tipo' => 'boleto',
-                'estado_pago' => 'pendiente',
+                'tipo' => 'Boleto',
+                'estado_pago' => 'Pendiente',
                 'usuario_id' => $data['usuario_id'],
                 'vehiculo_id' => $data['vehiculo_id'],
             ]);
@@ -39,6 +39,7 @@ class VentaService
                         'asiento' => $boletoData['asiento'],
                         'venta_id' => $venta->id,
                         'ruta_id' => $boletoData['ruta_id'],
+                        'viaje_id' => $boletoData['viaje_id'],
                     ]);
                 }
             }
@@ -56,8 +57,8 @@ class VentaService
             $venta = $this->ventaRepository->create([
                 'fecha' => $data['fecha'],
                 'monto_total' => $data['monto_total'],
-                'tipo' => 'encomienda',
-                'estado_pago' => 'pendiente',
+                'tipo' => 'Encomienda',
+                'estado_pago' => 'Pendiente',
                 'usuario_id' => $data['usuario_id'],
                 'vehiculo_id' => $data['vehiculo_id'],
             ]);

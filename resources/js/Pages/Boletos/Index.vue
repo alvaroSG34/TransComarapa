@@ -41,6 +41,14 @@ const cancelarBoleto = (id, asiento, rutaNombre) => {
     }
 };
 
+const marcarPagado = (id) => {
+    if (confirm('¿Confirmar que este boleto ha sido pagado?')) {
+        router.post(route('boletos.marcar-pagado', id), {}, {
+            preserveScroll: true
+        });
+    }
+};
+
 const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleString('es-BO', {
         year: 'numeric',
@@ -230,6 +238,13 @@ const getEstadoPagoColor = (estado) => {
                                             >
                                                 Ver
                                             </a>
+                                            <button
+                                                v-if="boleto.estado_pago === 'Pendiente'"
+                                                @click="marcarPagado(boleto.id)"
+                                                class="inline-block px-3 py-1 rounded text-sm text-green-600 hover:text-green-800 font-medium"
+                                            >
+                                                Marcar Pagado
+                                            </button>
                                             <button
                                                 v-if="boleto.estado_pago !== 'Cancelado'"
                                                 @click="cancelarBoleto(boleto.id, boleto.asiento, boleto.ruta_nombre)"

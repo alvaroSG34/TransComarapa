@@ -7,12 +7,14 @@ import { useHtml5Validation } from '@/composables/useHtml5Validation';
 
 const props = defineProps({
     rutas: Array,
-    clientes: Array
+    clientes: Array,
+    viajes: Array
 });
 
 useHtml5Validation();
 
 const form = useForm({
+    viaje_id: '',
     ruta_id: '',
     cliente_id: '',
     peso: '',
@@ -20,11 +22,17 @@ const form = useForm({
     nombre_destinatario: '',
     img_url: '',
     modalidad_pago: 'origen',
-    precio: ''
+    precio: '',
+    monto_pagado_origen: ''
 });
 
-const rutaSeleccionada = computed(() => {
-    return props.rutas.find(r => r.id === parseInt(form.ruta_id));
+const viajesDisponibles = computed(() => {
+    if (!form.ruta_id) return [];
+    return props.viajes.filter(v => v.ruta_id === parseInt(form.ruta_id));
+});
+
+const viajeSeleccionado = computed(() => {
+    return props.viajes.find(v => v.id === parseInt(form.viaje_id));
 });
 
 const submit = () => {
@@ -58,14 +66,14 @@ const submit = () => {
                                     id="ruta_id"
                                     v-model="form.ruta_id"
                                     required
+                                    @change="form.viaje_id = ''"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
                                     :class="{ 'border-red-500': form.errors.ruta_id }"
                                 >
                                     <option value="">Seleccione una ruta</option>
                                     <option v-for="ruta in rutas" :key="ruta.id" :value="ruta.id">
-                                        {{ ruta.nombre }} ({{ ruta.origen }} → {{ ruta.destino }}) - 
-                                        {{ ruta.distancia }} km - {{ ruta.duracion_estimada }}
+                                        {{ ruta.nombre }} ({{ ruta.origen }} → {{ ruta.destino }})
                                     </option>
                                 </select>
                                 <p v-if="form.errors.ruta_id" class="mt-1 text-sm text-red-600">
@@ -73,28 +81,56 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- Información de Ruta Seleccionada -->
-                            <div v-if="rutaSeleccionada" class="p-4 rounded-lg" style="background-color: var(--header-bg); border: 1px solid var(--border-color)">
+                            <!-- Selección de Viaje -->
+                            <div v-if="form.ruta_id">
+                                <label for="viaje_id" class="block text-sm font-medium mb-2">
+                                    Seleccionar Viaje *
+                                </label>
+                                <select
+                                    id="viaje_id"
+                                    v-model="form.viaje_id"
+                                    required
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                    :class="{ 'border-red-500': form.errors.viaje_id }"
+                                >
+                                    <option value="">Seleccione un viaje</option>
+                                    <option v-for="viaje in viajesDisponibles" :key="viaje.id" :value="viaje.id">
+                                        {{ new Date(viaje.fecha_salida).toLocaleString('es-BO') }} - 
+                                        {{ viaje.marca }} {{ viaje.modelo }} ({{ viaje.placa }}) - 
+                                        Estado: {{ viaje.estado }}
+                                    </option>
+                                </select>
+                                <p v-if="form.errors.viaje_id" class="mt-1 text-sm text-red-600">
+                                    {{ form.errors.viaje_id }}
+                                </p>
+                                <p v-else-if="viajesDisponibles.length === 0" class="mt-1 text-sm text-yellow-600">
+                                    No hay viajes disponibles para esta ruta
+                                </p>
+                            </div>
+
+                            <!-- Información de Viaje Seleccionado -->
+                            <div v-if="viajeSeleccionado" class="p-4 rounded-lg" style="background-color: var(--header-bg); border: 1px solid var(--border-color)">
                                 <h3 class="text-md font-semibold mb-3" style="color: var(--text-primary)">
-                                    Detalles de la Ruta
+                                    Detalles del Viaje
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                     <div>
-                                        <span style="color: var(--text-secondary)">Origen:</span>
+                                        <span style="color: var(--text-secondary)">Ruta:</span>
                                         <span class="ml-2 font-medium" style="color: var(--text-primary)">
-                                            {{ rutaSeleccionada.origen }}
+                                            {{ viajeSeleccionado.ruta_nombre }}
                                         </span>
                                     </div>
                                     <div>
-                                        <span style="color: var(--text-secondary)">Destino:</span>
+                                        <span style="color: var(--text-secondary)">Fecha Salida:</span>
                                         <span class="ml-2 font-medium" style="color: var(--text-primary)">
-                                            {{ rutaSeleccionada.destino }}
+                                            {{ new Date(viajeSeleccionado.fecha_salida).toLocaleString('es-BO') }}
                                         </span>
                                     </div>
                                     <div>
-                                        <span style="color: var(--text-secondary)">Duración:</span>
+                                        <span style="color: var(--text-secondary)">Vehículo:</span>
                                         <span class="ml-2 font-medium" style="color: var(--text-primary)">
-                                            {{ rutaSeleccionada.duracion_estimada }}
+                                            {{ viajeSeleccionado.marca }} {{ viajeSeleccionado.modelo }}
                                         </span>
                                     </div>
                                 </div>
@@ -266,6 +302,35 @@ const submit = () => {
                                 </div>
                                 <p v-if="form.errors.modalidad_pago" class="mt-1 text-sm text-red-600">
                                     {{ form.errors.modalidad_pago }}
+                                </p>
+                            </div>
+
+                            <!-- Monto Pagado en Origen (solo para modalidad mixto) -->
+                            <div v-if="form.modalidad_pago === 'mixto'">
+                                <label for="monto_pagado_origen" class="block text-sm font-medium mb-2">
+                                    Monto Pagado en Origen (Bs) *
+                                </label>
+                                <input
+                                    id="monto_pagado_origen"
+                                    type="number"
+                                    v-model="form.monto_pagado_origen"
+                                    :required="form.modalidad_pago === 'mixto'"
+                                    min="0"
+                                    :max="form.precio"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                    :class="{ 'border-red-500': form.errors.monto_pagado_origen }"
+                                />
+                                <p v-if="form.errors.monto_pagado_origen" class="mt-1 text-sm text-red-600">
+                                    {{ form.errors.monto_pagado_origen }}
+                                </p>
+                                <p v-else-if="form.precio && form.monto_pagado_origen" class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Pendiente en destino: Bs {{ (parseFloat(form.precio) - parseFloat(form.monto_pagado_origen)).toFixed(2) }}
+                                </p>
+                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Cantidad que paga el remitente ahora
                                 </p>
                             </div>
 

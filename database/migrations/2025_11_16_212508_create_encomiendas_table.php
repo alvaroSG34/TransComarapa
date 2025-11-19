@@ -14,11 +14,14 @@ return new class extends Migration
         Schema::create('encomiendas', function (Blueprint $table) {
             $table->foreignId('venta_id')->primary()->constrained('ventas')->onUpdate('cascade')->cascadeOnDelete();
             $table->foreignId('ruta_id')->constrained('rutas')->onUpdate('cascade')->restrictOnDelete();
+            $table->foreignId('viaje_id')->constrained('viajes')->onUpdate('cascade')->restrictOnDelete();
             $table->decimal('peso', 10, 2);
             $table->text('descripcion')->nullable();
             $table->string('nombre_destinatario', 150);
             $table->text('img_url')->nullable();
             $table->string('modalidad_pago', 20)->default('origen'); // origen, mixto, destino
+            $table->decimal('monto_pagado_origen', 10, 2)->default(0);
+            $table->decimal('monto_pagado_destino', 10, 2)->default(0);
             $table->timestamps();
         });
     }
