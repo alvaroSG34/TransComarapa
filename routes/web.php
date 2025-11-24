@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/encomiendas-buscar-cliente', [\App\Http\Controllers\EncomiendaController::class, 'buscarCliente'])->name('encomiendas.buscar-cliente');
         Route::post('/encomiendas-registrar-cliente', [\App\Http\Controllers\EncomiendaController::class, 'registrarCliente'])->name('encomiendas.registrar-cliente');
         Route::post('/encomiendas/{id}/pago-destino', [\App\Http\Controllers\EncomiendaController::class, 'registrarPagoDestino'])->name('encomiendas.pago-destino');
+        Route::post('/encomiendas/{id}/verificar-estado', [\App\Http\Controllers\EncomiendaController::class, 'verificarEstadoPago'])->name('encomiendas.verificar-estado');
         
         // Ventas - Lista y detalle
         Route::resource('ventas', \App\Http\Controllers\VentaController::class)->only(['index', 'show']);

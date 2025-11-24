@@ -63,7 +63,7 @@ class PagoVentaRepository implements PagoVentaRepositoryInterface
     public function findPendientesByVenta(int $ventaId): Collection
     {
         return $this->model->where('venta_id', $ventaId)
-            ->where('estado_pago', 'pendiente')
+            ->where('estado_pago', 'Pendiente')
             ->orderBy('num_cuota')
             ->get();
     }
@@ -71,7 +71,7 @@ class PagoVentaRepository implements PagoVentaRepositoryInterface
     public function findPagadosByVenta(int $ventaId): Collection
     {
         return $this->model->where('venta_id', $ventaId)
-            ->where('estado_pago', 'pagado')
+            ->where('estado_pago', 'Pagado')
             ->orderBy('num_cuota')
             ->get();
     }
@@ -79,7 +79,7 @@ class PagoVentaRepository implements PagoVentaRepositoryInterface
     public function getTotalPagadoByVenta(int $ventaId): float
     {
         return (float) $this->model->where('venta_id', $ventaId)
-            ->where('estado_pago', 'pagado')
+            ->where('estado_pago', 'Pagado')
             ->sum('monto');
     }
 }

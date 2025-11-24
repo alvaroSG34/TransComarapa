@@ -10,7 +10,6 @@ const props = defineProps({
 
 const filtrosLocales = ref({
     tipo: props.filtros?.tipo || 'todos',
-    estado_pago: props.filtros?.estado_pago || 'todos',
     fecha_desde: props.filtros?.fecha_desde || '',
     fecha_hasta: props.filtros?.fecha_hasta || '',
     cliente_busqueda: props.filtros?.cliente_busqueda || ''
@@ -26,13 +25,25 @@ const aplicarFiltros = () => {
 const limpiarFiltros = () => {
     filtrosLocales.value = {
         tipo: 'todos',
-        estado_pago: 'todos',
         fecha_desde: '',
         fecha_hasta: '',
         cliente_busqueda: ''
     };
     aplicarFiltros();
 };
+
+// Filtrar ventas por estado
+const ventasPendientes = computed(() => {
+    return props.ventas.filter(venta => venta.estado_pago === 'Pendiente');
+});
+
+const ventasPagadas = computed(() => {
+    return props.ventas.filter(venta => venta.estado_pago === 'Pagado');
+});
+
+const ventasCanceladas = computed(() => {
+    return props.ventas.filter(venta => venta.estado_pago === 'Cancelado');
+});
 
 const marcarComoPagado = (ventaId) => {
     if (confirm('¿Confirmar que esta venta ha sido pagada?')) {
@@ -110,7 +121,7 @@ const obtenerDetalle = (venta) => {
                             Filtros de Búsqueda
                         </h3>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <!-- Tipo de Venta -->
                             <div>
                                 <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
@@ -124,23 +135,6 @@ const obtenerDetalle = (venta) => {
                                     <option value="todos">Todos</option>
                                     <option value="Boleto">Boletos</option>
                                     <option value="Encomienda">Encomiendas</option>
-                                </select>
-                            </div>
-
-                            <!-- Estado de Pago -->
-                            <div>
-                                <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
-                                    Estado de Pago
-                                </label>
-                                <select
-                                    v-model="filtrosLocales.estado_pago"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
-                                >
-                                    <option value="todos">Todos</option>
-                                    <option value="Pendiente">Pendiente</option>
-                                    <option value="Pagado">Pagado</option>
-                                    <option value="Cancelado">Cancelado</option>
                                 </select>
                             </div>
 
@@ -205,10 +199,18 @@ const obtenerDetalle = (venta) => {
                     </div>
                 </div>
 
-                <!-- Tabla de Ventas -->
-                <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
+                <!-- Tabla de Ventas Pendientes -->
+                <div class="mb-6 overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
                     <div class="p-6">
-                        <div class="overflow-x-auto">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoPagoColor('Pendiente')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                Pendiente
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary)">
+                                ({{ ventasPendientes.length }})
+                            </span>
+                        </h3>
+                        <div v-if="ventasPendientes.length > 0" class="overflow-x-auto">
                             <table class="min-w-full divide-y" style="border-color: var(--border-color)">
                                 <thead>
                                     <tr style="background-color: var(--header-bg)">
@@ -230,16 +232,13 @@ const obtenerDetalle = (venta) => {
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
                                             Monto
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
-                                            Estado
-                                        </th>
                                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
                                             Acciones
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y" style="border-color: var(--border-color)">
-                                    <tr v-for="venta in ventas" :key="venta.id" style="background-color: var(--card-bg)">
+                                    <tr v-for="venta in ventasPendientes" :key="venta.id" style="background-color: var(--card-bg)">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: var(--text-primary)">
                                             #{{ venta.id }}
                                         </td>
@@ -267,10 +266,99 @@ const obtenerDetalle = (venta) => {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
                                             Bs {{ parseFloat(venta.monto_total).toFixed(2) }}
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <a
+                                                :href="route('ventas.show', venta.id)"
+                                                class="text-indigo-600 hover:text-indigo-900"
+                                            >
+                                                Ver
+                                            </a>
+                                            <button
+                                                v-if="venta.estado_pago === 'Pendiente'"
+                                                @click="marcarComoPagado(venta.id)"
+                                                class="text-green-600 hover:text-green-900"
+                                            >
+                                                Marcar Pagado
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary)">
+                                No hay ventas pendientes
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Ventas Pagadas -->
+                <div class="mb-6 overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoPagoColor('Pagado')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                Pagado
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary)">
+                                ({{ ventasPagadas.length }})
+                            </span>
+                        </h3>
+                        <div v-if="ventasPagadas.length > 0" class="overflow-x-auto">
+                            <table class="min-w-full divide-y" style="border-color: var(--border-color)">
+                                <thead>
+                                    <tr style="background-color: var(--header-bg)">
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            ID
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Fecha
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Tipo
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Cliente
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Detalle
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Monto
+                                        </th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Acciones
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" style="border-color: var(--border-color)">
+                                    <tr v-for="venta in ventasPagadas" :key="venta.id" style="background-color: var(--card-bg)">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: var(--text-primary)">
+                                            #{{ venta.id }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-primary)">
+                                            {{ formatearFecha(venta.fecha) }}
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getEstadoPagoColor(venta.estado_pago)]">
-                                                {{ venta.estado_pago }}
+                                            <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getTipoColor(venta.tipo)]">
+                                                {{ venta.tipo }}
                                             </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" style="color: var(--text-primary)">
+                                            <div class="font-medium">{{ venta.cliente_nombre }} {{ venta.cliente_apellido }}</div>
+                                            <div class="text-xs" style="color: var(--text-secondary)">CI: {{ venta.cliente_ci }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" style="color: var(--text-primary)">
+                                            <div class="font-medium">{{ obtenerDetalle(venta).titulo }}</div>
+                                            <div class="text-xs" style="color: var(--text-secondary)">
+                                                {{ obtenerDetalle(venta).origen }} → {{ obtenerDetalle(venta).destino }}
+                                            </div>
+                                            <div class="text-xs" style="color: var(--text-secondary)">
+                                                {{ obtenerDetalle(venta).subtitulo }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                                            Bs {{ parseFloat(venta.monto_total).toFixed(2) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <a
@@ -283,17 +371,98 @@ const obtenerDetalle = (venta) => {
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary)">
+                                No hay ventas pagadas
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-                            <!-- Estado Vacío -->
-                            <div v-if="!ventas || ventas.length === 0" class="text-center py-12">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium" style="color: var(--text-primary)">No se encontraron ventas</h3>
-                                <p class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                    Intenta ajustar los filtros de búsqueda o registra nuevas ventas desde Boletos o Encomiendas.
-                                </p>
-                            </div>
+                <!-- Tabla de Ventas Canceladas -->
+                <div class="mb-6 overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoPagoColor('Cancelado')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                Cancelado
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary)">
+                                ({{ ventasCanceladas.length }})
+                            </span>
+                        </h3>
+                        <div v-if="ventasCanceladas.length > 0" class="overflow-x-auto">
+                            <table class="min-w-full divide-y" style="border-color: var(--border-color)">
+                                <thead>
+                                    <tr style="background-color: var(--header-bg)">
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            ID
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Fecha
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Tipo
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Cliente
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Detalle
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Monto
+                                        </th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary)">
+                                            Acciones
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" style="border-color: var(--border-color)">
+                                    <tr v-for="venta in ventasCanceladas" :key="venta.id" style="background-color: var(--card-bg)">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: var(--text-primary)">
+                                            #{{ venta.id }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-primary)">
+                                            {{ formatearFecha(venta.fecha) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getTipoColor(venta.tipo)]">
+                                                {{ venta.tipo }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" style="color: var(--text-primary)">
+                                            <div class="font-medium">{{ venta.cliente_nombre }} {{ venta.cliente_apellido }}</div>
+                                            <div class="text-xs" style="color: var(--text-secondary)">CI: {{ venta.cliente_ci }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" style="color: var(--text-primary)">
+                                            <div class="font-medium">{{ obtenerDetalle(venta).titulo }}</div>
+                                            <div class="text-xs" style="color: var(--text-secondary)">
+                                                {{ obtenerDetalle(venta).origen }} → {{ obtenerDetalle(venta).destino }}
+                                            </div>
+                                            <div class="text-xs" style="color: var(--text-secondary)">
+                                                {{ obtenerDetalle(venta).subtitulo }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                                            Bs {{ parseFloat(venta.monto_total).toFixed(2) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <a
+                                                :href="route('ventas.show', venta.id)"
+                                                class="text-indigo-600 hover:text-indigo-900"
+                                            >
+                                                Ver
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary)">
+                                No hay ventas canceladas
+                            </p>
                         </div>
                     </div>
                 </div>

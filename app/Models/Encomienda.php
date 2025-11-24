@@ -16,11 +16,15 @@ class Encomienda extends Model
     protected $fillable = [
         'venta_id',
         'ruta_id',
+        'viaje_id',
         'peso',
         'descripcion',
         'nombre_destinatario',
         'img_url',
         'modalidad_pago',
+        'metodo_pago_destino',
+        'monto_pagado_origen',
+        'monto_pagado_destino',
     ];
 
     protected function casts(): array

@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Repositories\Contracts\RutaRepositoryInterface;
 use App\Repositories\Contracts\UsuarioRepositoryInterface;
 use App\Services\VentaService;
+use App\Services\PagoFacilService;
+use App\Services\PagoService;
+use App\Models\PagoVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class EncomiendaController extends Controller
@@ -15,15 +19,21 @@ class EncomiendaController extends Controller
     protected $rutaRepository;
     protected $usuarioRepository;
     protected $ventaService;
+    protected $pagoFacilService;
+    protected $pagoService;
 
     public function __construct(
         RutaRepositoryInterface $rutaRepository,
         UsuarioRepositoryInterface $usuarioRepository,
-        VentaService $ventaService
+        VentaService $ventaService,
+        PagoFacilService $pagoFacilService,
+        PagoService $pagoService
     ) {
         $this->rutaRepository = $rutaRepository;
         $this->usuarioRepository = $usuarioRepository;
         $this->ventaService = $ventaService;
+        $this->pagoFacilService = $pagoFacilService;
+        $this->pagoService = $pagoService;
     }
 
     /**
@@ -123,84 +133,277 @@ class EncomiendaController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'viaje_id' => 'required|exists:viajes,id',
-            'ruta_id' => 'required|exists:rutas,id',
-            'cliente_id' => 'required|exists:usuarios,id',
-            'peso' => 'required|numeric|min:0.01',
-            'descripcion' => 'nullable|string|max:500',
-            'nombre_destinatario' => 'required|string|max:150',
-            'img_url' => 'nullable|url|max:255',
-            'modalidad_pago' => 'required|in:origen,mixto,destino',
-            'precio' => 'required|numeric|min:0',
-            'monto_pagado_origen' => 'required_if:modalidad_pago,mixto|nullable|numeric|min:0',
-        ]);
-
+        Log::info('=== INICIO REGISTRO ENCOMIENDA ===');
+        Log::info('Datos recibidos:', $request->all());
+        
         try {
-            DB::beginTransaction();
-            
-            // Obtener el vehiculo_id del viaje
-            $viaje = DB::table('viajes')->where('id', $validated['viaje_id'])->first();
-            
-            // Calcular montos según modalidad de pago
-            $montoPagadoOrigen = 0;
-            $estadoPago = 'Pendiente';
-            
-            if ($validated['modalidad_pago'] === 'origen') {
-                $montoPagadoOrigen = $validated['precio'];
-                $estadoPago = 'Pagado';
-            } elseif ($validated['modalidad_pago'] === 'mixto') {
-                $montoPagadoOrigen = $validated['monto_pagado_origen'] ?? 0;
-            } elseif ($validated['modalidad_pago'] === 'destino') {
-                $montoPagadoOrigen = 0;
+            // Normalizar valores vacíos a null antes de validar
+            $requestData = $request->all();
+            if (isset($requestData['metodo_pago']) && $requestData['metodo_pago'] === '') {
+                $requestData['metodo_pago'] = null;
             }
-
-            // Crear venta
-            $ventaId = DB::table('ventas')->insertGetId([
-                'usuario_id' => $validated['cliente_id'],
-                'monto_total' => $validated['precio'],
-                'tipo' => 'Encomienda',
-                'estado_pago' => $estadoPago,
-                'fecha' => now(),
-                'vehiculo_id' => $viaje->vehiculo_id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            // Crear encomienda
-            DB::table('encomiendas')->insert([
-                'venta_id' => $ventaId,
-                'ruta_id' => $validated['ruta_id'],
-                'viaje_id' => $validated['viaje_id'],
-                'peso' => $validated['peso'],
-                'descripcion' => $validated['descripcion'],
-                'nombre_destinatario' => $validated['nombre_destinatario'],
-                'img_url' => $validated['img_url'],
-                'modalidad_pago' => $validated['modalidad_pago'],
-                'monto_pagado_origen' => $montoPagadoOrigen,
-                'monto_pagado_destino' => 0,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('encomiendas.index')
-                ->with('success', 'Encomienda registrada exitosamente.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
+            if (isset($requestData['metodo_pago_destino']) && $requestData['metodo_pago_destino'] === '') {
+                $requestData['metodo_pago_destino'] = null;
+            }
+            if (isset($requestData['monto_pagado_origen']) && $requestData['monto_pagado_origen'] === '') {
+                $requestData['monto_pagado_origen'] = null;
+            }
+            $request->merge($requestData);
             
-            // Log del error para debugging
-            \Log::error('Error al registrar encomienda: ' . $e->getMessage(), [
-                'data' => $validated ?? null,
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Preparar reglas de validación según modalidad
+            $rules = [
+                'viaje_id' => 'required|exists:viajes,id',
+                'ruta_id' => 'required|exists:rutas,id',
+                'cliente_id' => 'required|exists:usuarios,id',
+                'peso' => 'required|numeric|min:0.01',
+                'descripcion' => 'nullable|string|max:500',
+                'nombre_destinatario' => 'required|string|max:150',
+                'img_url' => 'nullable|url|max:255',
+                'modalidad_pago' => 'required|in:origen,mixto,destino',
+                'precio' => 'required|numeric|min:0',
+            ];
             
-            return back()
-                ->withInput()
-                ->with('error', 'Error al registrar la encomienda: ' . $e->getMessage());
+            // Reglas condicionales para metodo_pago
+            if (in_array($request->modalidad_pago, ['origen', 'mixto'])) {
+                $rules['metodo_pago'] = 'required|in:Efectivo,QR';
+            } else {
+                $rules['metodo_pago'] = 'nullable|in:Efectivo,QR';
+            }
+            
+            // metodo_pago_destino no se especifica al crear (se elige al confirmar pago en destino)
+            $rules['metodo_pago_destino'] = 'nullable|in:Efectivo,QR';
+            
+            // Reglas condicionales para monto_pagado_origen
+            if ($request->modalidad_pago === 'mixto') {
+                $rules['monto_pagado_origen'] = 'required|numeric|min:0';
+            } else {
+                $rules['monto_pagado_origen'] = 'nullable|numeric|min:0';
+            }
+            
+            $validated = $request->validate($rules);
+            
+            Log::info('Validación exitosa. Datos validados:', $validated);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Error de validación:', [
+                'errors' => $e->errors(),
+                'data' => $request->all()
+            ]);
+            throw $e;
         }
+
+        return DB::transaction(function () use ($validated) {
+            try {
+                Log::info('Iniciando transacción de base de datos');
+                
+                // Obtener el vehiculo_id del viaje
+                Log::info('Buscando viaje con ID: ' . $validated['viaje_id']);
+                $viaje = DB::table('viajes')->where('id', $validated['viaje_id'])->first();
+                
+                if (!$viaje) {
+                    Log::error('Viaje no encontrado con ID: ' . $validated['viaje_id']);
+                    throw new \Exception('Viaje no encontrado.');
+                }
+                
+                Log::info('Viaje encontrado:', [
+                    'id' => $viaje->id,
+                    'vehiculo_id' => $viaje->vehiculo_id,
+                    'ruta_id' => $viaje->ruta_id
+                ]);
+
+                // Calcular montos según modalidad
+                Log::info('Calculando montos según modalidad: ' . $validated['modalidad_pago']);
+                $montoPagadoOrigen = 0;
+                $estadoPago = 'Pendiente';
+                
+                if ($validated['modalidad_pago'] === 'origen') {
+                    if ($validated['metodo_pago'] === 'Efectivo') {
+                        $montoPagadoOrigen = $validated['precio'];
+                        $estadoPago = 'Pagado';
+                        Log::info('Modalidad Origen - Efectivo: Monto pagado = ' . $montoPagadoOrigen);
+                    } else {
+                        // QR: se pagará después, monto_pagado_origen = 0 temporalmente
+                        $montoPagadoOrigen = 0;
+                        $estadoPago = 'Pendiente';
+                        Log::info('Modalidad Origen - QR: Monto pendiente, se generará QR');
+                    }
+                } elseif ($validated['modalidad_pago'] === 'mixto') {
+                    $montoPagadoOrigen = $validated['monto_pagado_origen'] ?? 0;
+                    Log::info('Modalidad Mixto - Monto origen: ' . $montoPagadoOrigen . ', Método: ' . $validated['metodo_pago']);
+                    if ($validated['metodo_pago'] === 'Efectivo' && $montoPagadoOrigen > 0) {
+                        // Si paga en efectivo en origen, el monto ya está pagado
+                        // Si es QR, monto_pagado_origen se actualizará cuando se pague
+                        Log::info('Modalidad Mixto - Efectivo en origen ya pagado');
+                    }
+                } elseif ($validated['modalidad_pago'] === 'destino') {
+                    $montoPagadoOrigen = 0;
+                    $estadoPago = 'Pendiente';
+                    Log::info('Modalidad Destino: Todo se pagará en destino');
+                }
+                
+                Log::info('Montos calculados:', [
+                    'monto_pagado_origen' => $montoPagadoOrigen,
+                    'estado_pago' => $estadoPago
+                ]);
+
+                // Preparar datos para el servicio
+                Log::info('Preparando datos para crear venta y encomienda');
+                $ventaData = [
+                    'fecha' => now(),
+                    'monto_total' => $validated['precio'],
+                    'usuario_id' => $validated['cliente_id'],
+                    'vehiculo_id' => $viaje->vehiculo_id,
+                    'encomienda' => [
+                        'ruta_id' => $validated['ruta_id'],
+                        'viaje_id' => $validated['viaje_id'],
+                        'peso' => $validated['peso'],
+                        'descripcion' => $validated['descripcion'],
+                        'nombre_destinatario' => $validated['nombre_destinatario'],
+                        'img_url' => $validated['img_url'],
+                        'modalidad_pago' => $validated['modalidad_pago'],
+                        'metodo_pago_destino' => $validated['metodo_pago_destino'] ?? null,
+                        'monto_pagado_origen' => $montoPagadoOrigen,
+                    ]
+                ];
+                
+                Log::info('Datos de venta preparados:', $ventaData);
+
+                // Crear venta y encomienda usando el servicio
+                Log::info('Llamando a ventaService->crearVentaEncomienda');
+                $venta = $this->ventaService->crearVentaEncomienda($ventaData);
+                Log::info('Venta creada exitosamente:', [
+                    'venta_id' => $venta->id,
+                    'monto_total' => $venta->monto_total
+                ]);
+                
+                // Actualizar estado de venta si es necesario
+                if ($estadoPago === 'Pagado') {
+                    Log::info('Actualizando estado de venta a Pagado');
+                    DB::table('ventas')->where('id', $venta->id)->update(['estado_pago' => 'Pagado']);
+                }
+
+                // Si modalidad es origen o mixto Y metodo_pago es QR, generar QR
+                $qrData = null;
+                Log::info('Verificando si se debe generar QR:', [
+                    'modalidad_pago' => $validated['modalidad_pago'],
+                    'metodo_pago' => $validated['metodo_pago'] ?? 'N/A'
+                ]);
+                
+                if (in_array($validated['modalidad_pago'], ['origen', 'mixto']) && $validated['metodo_pago'] === 'QR') {
+                    $montoQR = ($validated['modalidad_pago'] === 'origen') 
+                        ? $validated['precio'] 
+                        : ($validated['monto_pagado_origen'] ?? 0);
+                    
+                    Log::info('Se debe generar QR. Monto QR: ' . $montoQR);
+                    
+                    if ($montoQR > 0) {
+                        Log::info('Creando PagoVenta para QR origen');
+                        // Crear PagoVenta para origen (num_cuota = 1)
+                        $pagoVenta = $this->pagoService->crearPago([
+                            'venta_id' => $venta->id,
+                            'num_cuota' => 1, // Origen
+                            'monto' => $montoQR,
+                            'metodo_pago' => 'QR',
+                            'estado_pago' => 'Pendiente',
+                        ]);
+                        
+                        Log::info('PagoVenta creado:', [
+                            'pago_venta_id' => $pagoVenta->id,
+                            'monto' => $pagoVenta->monto
+                        ]);
+
+                        // Generar QR
+                        Log::info('Generando QR con PagoFácil');
+                        $resultadoQr = $this->pagoFacilService->generarQr($pagoVenta);
+                        
+                        Log::info('Resultado generación QR:', [
+                            'success' => $resultadoQr['success'] ?? false,
+                            'error' => $resultadoQr['error'] ?? null
+                        ]);
+
+                        if (!$resultadoQr['success']) {
+                            Log::error('Error al generar QR:', $resultadoQr);
+                            throw new \Exception('Error al generar QR: ' . ($resultadoQr['error'] ?? 'Error desconocido'));
+                        }
+
+                        // Actualizar monto_pagado_origen si es origen (se actualizará cuando se pague)
+                        if ($validated['modalidad_pago'] === 'origen') {
+                            // No actualizar aún, se actualizará cuando se verifique el pago
+                        } else {
+                            // Mixto: el monto_pagado_origen ya está guardado
+                        }
+
+                        $qrData = [
+                            'qr_base64' => $resultadoQr['pago_venta']->qr_base64,
+                            'transaction_id' => $resultadoQr['pago_venta']->transaction_id,
+                            'encomienda_id' => $venta->id,
+                            'monto_total' => $montoQR,
+                            'tipo' => 'origen',
+                        ];
+                        Log::info('QR generado exitosamente:', [
+                            'transaction_id' => $qrData['transaction_id'],
+                            'encomienda_id' => $qrData['encomienda_id']
+                        ]);
+                    } else {
+                        Log::warning('Monto QR es 0 o negativo, no se genera QR');
+                    }
+                } else {
+                    Log::info('No se requiere generar QR para esta modalidad/método de pago');
+                }
+
+                // Obtener datos para re-renderizar la vista si hay QR
+                if ($qrData) {
+                    Log::info('Preparando respuesta con QR. Re-renderizando vista Create');
+                    $rutas = $this->rutaRepository->all();
+                    $clientes = $this->usuarioRepository->findByRol('Cliente');
+                    
+                    $viajes = DB::table('viajes')
+                        ->join('rutas', 'viajes.ruta_id', '=', 'rutas.id')
+                        ->join('vehiculos', 'viajes.vehiculo_id', '=', 'vehiculos.id')
+                        ->whereIn('viajes.estado', ['programado', 'en_curso'])
+                        ->select(
+                            'viajes.id',
+                            'viajes.ruta_id',
+                            'viajes.fecha_salida',
+                            'viajes.precio',
+                            'viajes.estado',
+                            'viajes.vehiculo_id',
+                            'rutas.nombre as ruta_nombre',
+                            'rutas.origen',
+                            'rutas.destino',
+                            'vehiculos.marca',
+                            'vehiculos.modelo',
+                            'vehiculos.placa'
+                        )
+                        ->orderBy('viajes.fecha_salida', 'asc')
+                        ->get();
+
+                    Log::info('Retornando vista Create con QR');
+                    return Inertia::render('Encomiendas/Create', [
+                        'rutas' => $rutas,
+                        'clientes' => $clientes,
+                        'viajes' => $viajes,
+                        'qr_data' => $qrData,
+                        'success' => 'Encomienda registrada exitosamente. QR generado.'
+                    ]);
+                }
+
+                Log::info('Encomienda registrada exitosamente. Redirigiendo a index');
+                return redirect()->route('encomiendas.index')
+                    ->with('success', 'Encomienda registrada exitosamente.');
+
+            } catch (\Exception $e) {
+                // Log del error para debugging
+                Log::error('=== ERROR AL REGISTRAR ENCOMIENDA ===');
+                Log::error('Mensaje: ' . $e->getMessage());
+                Log::error('Archivo: ' . $e->getFile() . ':' . $e->getLine());
+                Log::error('Datos validados:', $validated ?? null);
+                Log::error('Trace completo:', [
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                throw $e;
+            }
+        });
     }
 
     /**
@@ -234,8 +437,34 @@ class EncomiendaController extends Controller
                 ->with('error', 'Encomienda no encontrada.');
         }
 
+        // Obtener PagoVenta de origen (num_cuota = 1) si existe
+        $pagoOrigen = PagoVenta::where('venta_id', $id)
+            ->where('num_cuota', 1)
+            ->where('metodo_pago', 'QR')
+            ->first();
+
+        // Obtener PagoVenta de destino (num_cuota = 2) si existe
+        $pagoDestino = PagoVenta::where('venta_id', $id)
+            ->where('num_cuota', 2)
+            ->where('metodo_pago', 'QR')
+            ->first();
+
         return Inertia::render('Encomiendas/Show', [
-            'encomienda' => $encomienda
+            'encomienda' => $encomienda,
+            'pago_origen' => $pagoOrigen ? [
+                'id' => $pagoOrigen->id,
+                'qr_base64' => $pagoOrigen->qr_base64,
+                'transaction_id' => $pagoOrigen->transaction_id,
+                'estado_pago' => $pagoOrigen->estado_pago,
+                'monto' => $pagoOrigen->monto,
+            ] : null,
+            'pago_destino' => $pagoDestino ? [
+                'id' => $pagoDestino->id,
+                'qr_base64' => $pagoDestino->qr_base64,
+                'transaction_id' => $pagoDestino->transaction_id,
+                'estado_pago' => $pagoDestino->estado_pago,
+                'monto' => $pagoDestino->monto,
+            ] : null,
         ]);
     }
 
@@ -375,6 +604,16 @@ class EncomiendaController extends Controller
      */
     public function registrarPagoDestino(Request $request, string $id)
     {
+        Log::info('=== REGISTRAR PAGO DESTINO ===');
+        Log::info('Encomienda ID:', ['id' => $id]);
+        Log::info('Datos recibidos:', $request->all());
+        
+        $validated = $request->validate([
+            'metodo_pago_destino' => 'required|in:Efectivo,QR'
+        ]);
+        
+        Log::info('Validación exitosa. Método:', ['metodo_pago_destino' => $validated['metodo_pago_destino']]);
+
         try {
             DB::beginTransaction();
 
@@ -396,7 +635,46 @@ class EncomiendaController extends Controller
                 throw new \Exception('Esta encomienda ya está completamente pagada.');
             }
 
-            // Actualizar monto pagado en destino sumando el monto pendiente
+            // Actualizar metodo_pago_destino en la encomienda
+            DB::table('encomiendas')
+                ->where('venta_id', $id)
+                ->update([
+                    'metodo_pago_destino' => $validated['metodo_pago_destino'],
+                    'updated_at' => now()
+                ]);
+
+            // Si metodo_pago_destino es QR, generar QR
+            if ($validated['metodo_pago_destino'] === 'QR') {
+                // Crear PagoVenta para destino (num_cuota = 2)
+                $pagoVenta = $this->pagoService->crearPago([
+                    'venta_id' => $id,
+                    'num_cuota' => 2, // Destino
+                    'monto' => $montoPendiente,
+                    'metodo_pago' => 'QR',
+                    'estado_pago' => 'Pendiente',
+                ]);
+
+                // Generar QR
+                $resultadoQr = $this->pagoFacilService->generarQr($pagoVenta);
+
+                if (!$resultadoQr['success']) {
+                    throw new \Exception('Error al generar QR: ' . ($resultadoQr['error'] ?? 'Error desconocido'));
+                }
+
+                DB::commit();
+
+                return redirect()->route('encomiendas.show', $id)
+                    ->with('qr_data_destino', [
+                        'qr_base64' => $resultadoQr['pago_venta']->qr_base64,
+                        'transaction_id' => $resultadoQr['pago_venta']->transaction_id,
+                        'encomienda_id' => $id,
+                        'monto_total' => $montoPendiente,
+                        'tipo' => 'destino',
+                    ])
+                    ->with('success', 'QR generado para pago en destino. Monto pendiente: Bs ' . number_format($montoPendiente, 2) . '.');
+            }
+
+            // Si es Efectivo, comportamiento normal
             $nuevoMontoPagadoDestino = $encomienda->monto_pagado_destino + $montoPendiente;
             
             DB::table('encomiendas')
@@ -429,6 +707,176 @@ class EncomiendaController extends Controller
     }
 
     /**
+     * Verificar estado del pago QR (origen o destino)
+     */
+    public function verificarEstadoPago(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'tipo' => 'required|in:origen,destino',
+        ]);
+
+        try {
+            $encomienda = DB::table('encomiendas')->where('venta_id', $id)->first();
+            
+            if (!$encomienda) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Encomienda no encontrada.'
+                ], 404);
+            }
+
+            // Buscar PagoVenta según tipo
+            $numCuota = $validated['tipo'] === 'origen' ? 1 : 2;
+            
+            $pagoVenta = PagoVenta::where('venta_id', $id)
+                ->where('num_cuota', $numCuota)
+                ->where('metodo_pago', 'QR')
+                ->first();
+
+            if (!$pagoVenta) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se encontró pago QR ' . $validated['tipo'] . ' para esta encomienda.'
+                ], 404);
+            }
+
+            // Consultar estado en PagoFácil
+            $resultado = $this->pagoFacilService->consultarEstadoPago($pagoVenta);
+
+            if (!$resultado['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $resultado['error'] ?? 'Error al consultar estado'
+                ], 500);
+            }
+
+            // Verificar si el pago fue completado
+            $estadoPagoFacil = $resultado['data']['values']['paymentStatus'] ?? null;
+            
+            // Si el estado es 1 o 5 (pagado), actualizar en BD
+            if ($estadoPagoFacil == 1 || $estadoPagoFacil == 5) {
+                DB::table('pago_ventas')
+                    ->where('id', $pagoVenta->id)
+                    ->update([
+                        'estado_pago' => 'Pagado',
+                        'fecha_pago' => now(),
+                        'updated_at' => now()
+                    ]);
+
+                // Actualizar monto pagado según tipo
+                if ($validated['tipo'] === 'origen') {
+                    DB::table('encomiendas')
+                        ->where('venta_id', $id)
+                        ->update([
+                            'monto_pagado_origen' => $pagoVenta->monto,
+                            'updated_at' => now()
+                        ]);
+                } else {
+                    $encomiendaActual = DB::table('encomiendas')
+                        ->where('venta_id', $id)
+                        ->first();
+                    
+                    DB::table('encomiendas')
+                        ->where('venta_id', $id)
+                        ->update([
+                            'monto_pagado_destino' => ($encomiendaActual->monto_pagado_destino ?? 0) + $pagoVenta->monto,
+                            'updated_at' => now()
+                        ]);
+                }
+
+                // Verificar si la venta está completamente pagada
+                $encomiendaActualizada = DB::table('encomiendas')
+                    ->where('venta_id', $id)
+                    ->first();
+                
+                $totalPagado = $encomiendaActualizada->monto_pagado_origen + $encomiendaActualizada->monto_pagado_destino;
+                $montoTotal = DB::table('ventas')->where('id', $id)->value('monto_total');
+                
+                if ($totalPagado >= $montoTotal) {
+                    DB::table('ventas')
+                        ->where('id', $id)
+                        ->update([
+                            'estado_pago' => 'Pagado',
+                            'updated_at' => now()
+                        ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'pagado' => true,
+                    'message' => 'El pago ' . $validated['tipo'] . ' ha sido confirmado exitosamente.'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'pagado' => false,
+                'message' => 'El pago ' . $validated['tipo'] . ' aún está pendiente.',
+                'estado' => $estadoPagoFacil
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al verificar estado: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reintentar generación de QR (origen o destino)
+     */
+    public function reintentarQr(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'tipo' => 'required|in:origen,destino',
+        ]);
+
+        try {
+            $encomienda = DB::table('encomiendas')->where('venta_id', $id)->first();
+            
+            if (!$encomienda) {
+                return back()->with('error', 'Encomienda no encontrada.');
+            }
+
+            // Buscar PagoVenta según tipo
+            $numCuota = $validated['tipo'] === 'origen' ? 1 : 2;
+            
+            $pagoVenta = PagoVenta::where('venta_id', $id)
+                ->where('num_cuota', $numCuota)
+                ->where('metodo_pago', 'QR')
+                ->first();
+
+            if (!$pagoVenta) {
+                return back()->with('error', 'No se encontró pago QR ' . $validated['tipo'] . ' para esta encomienda.');
+            }
+
+            // Generar QR nuevamente
+            $resultadoQr = $this->pagoFacilService->generarQr($pagoVenta);
+
+            if (!$resultadoQr['success']) {
+                return back()->with('error', 'Error al generar QR: ' . ($resultadoQr['error'] ?? 'Error desconocido'));
+            }
+
+            $qrDataKey = $validated['tipo'] === 'origen' ? 'qr_data' : 'qr_data_destino';
+
+            return back()->with([
+                'success' => 'QR ' . $validated['tipo'] . ' regenerado exitosamente.',
+                $qrDataKey => [
+                    'qr_base64' => $resultadoQr['pago_venta']->qr_base64,
+                    'transaction_id' => $resultadoQr['pago_venta']->transaction_id,
+                    'encomienda_id' => $id,
+                    'monto_total' => $pagoVenta->monto,
+                    'tipo' => $validated['tipo'],
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al reintentar QR: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
@@ -442,13 +890,20 @@ class EncomiendaController extends Controller
                 throw new \Exception('Encomienda no encontrada.');
             }
 
-            // Eliminar encomienda (la venta se elimina por cascade)
+            // Obtener el venta_id antes de eliminar
+            $ventaId = $encomienda->venta_id;
+
+            // Eliminar encomienda
             DB::table('encomiendas')->where('venta_id', $id)->delete();
+
+            // Eliminar la venta asociada
+            // Esto también eliminará automáticamente los pago_ventas asociados por cascade
+            DB::table('ventas')->where('id', $ventaId)->delete();
 
             DB::commit();
 
             return redirect()->route('encomiendas.index')
-                ->with('success', 'Encomienda eliminada exitosamente.');
+                ->with('success', 'Encomienda y venta asociada eliminadas exitosamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();

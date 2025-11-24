@@ -36,7 +36,7 @@ class PagoService
                 'monto' => $data['monto'],
                 'metodo_pago' => $data['metodo_pago'],
                 'qr_base64' => $data['qr_base64'] ?? null,
-                'estado_pago' => $data['estado_pago'] ?? 'pagado',
+                'estado_pago' => $data['estado_pago'] ?? 'Pagado',
             ]);
 
             // Disparar evento para actualizar estado de venta
@@ -114,7 +114,7 @@ class PagoService
             'monto' => $venta->monto_total,
             'metodo_pago' => $data['metodo_pago'],
             'qr_base64' => $data['qr_base64'] ?? null,
-            'estado_pago' => 'pagado',
+            'estado_pago' => 'Pagado',
             'fecha_pago' => now(),
         ]);
     }

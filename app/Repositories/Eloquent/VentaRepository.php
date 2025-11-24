@@ -97,6 +97,6 @@ class VentaRepository implements VentaRepositoryInterface
 
     public function findPendientes(): Collection
     {
-        return $this->findByEstadoPago('pendiente');
+        return $this->findByEstadoPago('Pendiente');
     }
 }

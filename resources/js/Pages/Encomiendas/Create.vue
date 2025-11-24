@@ -1,14 +1,17 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BuscadorCliente from '@/Components/BuscadorCliente.vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, useForm, router } from '@inertiajs/vue3';
+import { computed, ref, onMounted } from 'vue';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
+import axios from 'axios';
 
 const props = defineProps({
     rutas: Array,
     clientes: Array,
-    viajes: Array
+    viajes: Array,
+    qr_data: Object,
+    success: String
 });
 
 useHtml5Validation();
@@ -22,9 +25,16 @@ const form = useForm({
     nombre_destinatario: '',
     img_url: '',
     modalidad_pago: 'origen',
+    metodo_pago: '',
+    metodo_pago_destino: '',
     precio: '',
     monto_pagado_origen: ''
 });
+
+const mostrarModalQr = ref(false);
+const qrData = ref(null);
+const errorQr = ref(null);
+const reintentando = ref(false);
 
 const viajesDisponibles = computed(() => {
     if (!form.ruta_id) return [];
@@ -35,11 +45,93 @@ const viajeSeleccionado = computed(() => {
     return props.viajes.find(v => v.id === parseInt(form.viaje_id));
 });
 
+const rutaSeleccionada = computed(() => {
+    return props.rutas.find(r => r.id === parseInt(form.ruta_id));
+});
+
 const submit = () => {
+    console.log('=== INICIO SUBMIT ENCOMIENDA ===');
+    console.log('Datos del formulario:', form.data());
+    console.log('URL:', route('encomiendas.store'));
+    
     form.post(route('encomiendas.store'), {
-        preserveScroll: true
+        preserveScroll: true,
+        onStart: () => {
+            console.log('Enviando petición al servidor...');
+        },
+        onSuccess: (page) => {
+            console.log('Respuesta exitosa recibida:', page);
+            console.log('Props recibidas:', page.props);
+            
+            // Si hay datos de QR en las props, mostrar modal
+            if (page.props.qr_data) {
+                console.log('QR data encontrado:', page.props.qr_data);
+                qrData.value = page.props.qr_data;
+                mostrarModalQr.value = true;
+                errorQr.value = null;
+            } else {
+                console.log('No hay QR data, redirigiendo a index');
+            }
+        },
+        onError: (errors) => {
+            console.error('=== ERROR EN SUBMIT ===');
+            console.error('Errores recibidos:', errors);
+            console.error('Errores del formulario:', form.errors);
+            
+            // Si hay error específico de QR, mostrar en modal
+            if (errors.qr_error) {
+                console.error('Error de QR:', errors.qr_error);
+                errorQr.value = errors.qr_error;
+                mostrarModalQr.value = true;
+            }
+        },
+        onFinish: () => {
+            console.log('Submit finalizado');
+        }
     });
 };
+
+const reintentarGenerarQr = async () => {
+    if (!qrData.value?.encomienda_id) return;
+    
+    reintentando.value = true;
+    errorQr.value = null;
+    
+    try {
+        const response = await axios.post(route('encomiendas.reintentar-qr', qrData.value.encomienda_id), {
+            tipo: qrData.value.tipo || 'origen'
+        });
+        
+        if (response.data?.qr_data || response.data?.qr_data_destino) {
+            qrData.value = response.data.qr_data || response.data.qr_data_destino;
+        }
+        
+        // Recargar página para obtener datos actualizados
+        router.reload({ only: [] });
+    } catch (error) {
+        errorQr.value = error.response?.data?.message || 'Error al reintentar generación de QR';
+    } finally {
+        reintentando.value = false;
+    }
+};
+
+const cerrarModal = () => {
+    mostrarModalQr.value = false;
+    qrData.value = null;
+    errorQr.value = null;
+    // Redirigir a index después de cerrar
+    router.visit(route('encomiendas.index'));
+};
+
+// Verificar si hay datos de QR en las props al cargar
+onMounted(() => {
+    // Si hay datos de QR en las props, mostrar modal
+    if (props.qr_data) {
+        qrData.value = props.qr_data;
+        mostrarModalQr.value = true;
+        errorQr.value = null;
+    }
+});
 </script>
 
 <template>
@@ -263,6 +355,7 @@ const submit = () => {
                                             v-model="form.modalidad_pago"
                                             value="origen"
                                             class="mr-3"
+                                            @change="form.metodo_pago_destino = ''"
                                         />
                                         <div>
                                             <div class="font-medium" style="color: var(--text-primary)">Pago en Origen</div>
@@ -293,6 +386,7 @@ const submit = () => {
                                             v-model="form.modalidad_pago"
                                             value="destino"
                                             class="mr-3"
+                                            @change="form.metodo_pago = ''"
                                         />
                                         <div>
                                             <div class="font-medium" style="color: var(--text-primary)">Pago en Destino</div>
@@ -304,6 +398,32 @@ const submit = () => {
                                     {{ form.errors.modalidad_pago }}
                                 </p>
                             </div>
+
+                            <!-- Método de Pago en Origen (solo para origen o mixto) -->
+                            <div v-if="form.modalidad_pago === 'origen' || form.modalidad_pago === 'mixto'">
+                                <label for="metodo_pago" class="block text-sm font-medium mb-2">
+                                    Método de Pago en Origen *
+                                </label>
+                                <select
+                                    id="metodo_pago"
+                                    v-model="form.metodo_pago"
+                                    :required="form.modalidad_pago === 'origen' || form.modalidad_pago === 'mixto'"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                    :class="{ 'border-red-500': form.errors.metodo_pago }"
+                                >
+                                    <option value="">Seleccione método de pago</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="QR">QR (PagoFácil)</option>
+                                </select>
+                                <p v-if="form.errors.metodo_pago" class="mt-1 text-sm text-red-600">
+                                    {{ form.errors.metodo_pago }}
+                                </p>
+                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Cómo se pagará la parte de origen
+                                </p>
+                            </div>
+
 
                             <!-- Monto Pagado en Origen (solo para modalidad mixto) -->
                             <div v-if="form.modalidad_pago === 'mixto'">
@@ -416,6 +536,86 @@ const submit = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para mostrar QR -->
+        <div v-if="mostrarModalQr" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="cerrarModal">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" style="background-color: var(--card-bg)">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold" style="color: var(--text-primary)">
+                            {{ errorQr ? 'Error al Generar QR' : 'Código QR de Pago' }}
+                        </h3>
+                        <button
+                            @click="cerrarModal"
+                            class="text-gray-400 hover:text-gray-600"
+                            style="color: var(--text-secondary)"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Si hay QR -->
+                    <div v-if="qrData && qrData.qr_base64" class="text-center">
+                        <div class="mb-4">
+                            <img 
+                                :src="`data:image/png;base64,${qrData.qr_base64}`" 
+                                alt="Código QR de Pago"
+                                class="mx-auto border-2 rounded-lg"
+                                style="border-color: var(--border-color); max-width: 300px;"
+                            />
+                        </div>
+                        <p class="text-sm mb-4" style="color: var(--text-secondary)">
+                            El cliente debe escanear este código QR para realizar el pago.
+                        </p>
+                        <p class="text-xs mb-4" style="color: var(--text-secondary)">
+                            ID de Transacción: {{ qrData.transaction_id || 'N/A' }}
+                        </p>
+                        <p class="text-sm font-medium mb-2" style="color: var(--text-primary)">
+                            Monto: Bs {{ parseFloat(qrData.monto_total).toFixed(2) }}
+                        </p>
+                        <div class="flex gap-2 justify-center">
+                            <button
+                                @click="cerrarModal"
+                                class="px-4 py-2 rounded-md text-sm font-medium"
+                                style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Si hay error -->
+                    <div v-else-if="errorQr" class="text-center">
+                        <div class="mb-4">
+                            <svg class="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-red-600 mb-4">{{ errorQr }}</p>
+                        <div class="flex gap-2 justify-center">
+                            <button
+                                @click="reintentarGenerarQr"
+                                :disabled="reintentando"
+                                class="px-4 py-2 rounded-md text-sm font-medium"
+                                style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                                :class="{ 'opacity-50 cursor-not-allowed': reintentando }"
+                            >
+                                {{ reintentando ? 'Reintentando...' : 'Reintentar' }}
+                            </button>
+                            <button
+                                @click="cerrarModal"
+                                class="px-4 py-2 rounded-md text-sm font-medium"
+                                style="background-color: var(--button-secondary-bg); color: var(--button-secondary-text)"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

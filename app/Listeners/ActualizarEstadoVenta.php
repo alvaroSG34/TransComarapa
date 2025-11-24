@@ -36,9 +36,9 @@ class ActualizarEstadoVenta
         if ($venta) {
             // Actualizar estado según el total pagado
             if ($totalPagado >= $venta->monto_total) {
-                $this->ventaRepository->update($venta->id, ['estado_pago' => 'pagado']);
+                $this->ventaRepository->update($venta->id, ['estado_pago' => 'Pagado']);
             } else {
-                $this->ventaRepository->update($venta->id, ['estado_pago' => 'pendiente']);
+                $this->ventaRepository->update($venta->id, ['estado_pago' => 'Pendiente']);
             }
         }
     }

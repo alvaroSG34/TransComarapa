@@ -541,7 +541,7 @@ class BoletoController extends Controller
                 DB::table('pago_ventas')
                     ->where('id', $pagoVenta->id)
                     ->update([
-                        'estado_pago' => 'pagado',
+                        'estado_pago' => 'Pagado',
                         'fecha_pago' => now(),
                         'updated_at' => now()
                     ]);

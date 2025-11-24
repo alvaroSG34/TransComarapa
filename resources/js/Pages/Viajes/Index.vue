@@ -47,6 +47,33 @@ const getEstadoBadgeClass = (estado) => {
     };
     return classes[estado] || 'bg-gray-100 text-gray-800';
 };
+
+const formatearEstado = (estado) => {
+    const estados = {
+        programado: 'Programado',
+        en_curso: 'En Curso',
+        finalizado: 'Finalizado',
+        cancelado: 'Cancelado'
+    };
+    return estados[estado] || estado;
+};
+
+// Filtrar viajes por estado
+const viajesProgramados = computed(() => {
+    return props.viajes.filter(viaje => viaje.estado === 'programado');
+});
+
+const viajesEnCurso = computed(() => {
+    return props.viajes.filter(viaje => viaje.estado === 'en_curso');
+});
+
+const viajesFinalizados = computed(() => {
+    return props.viajes.filter(viaje => viaje.estado === 'finalizado');
+});
+
+const viajesCancelados = computed(() => {
+    return props.viajes.filter(viaje => viaje.estado === 'cancelado');
+});
 </script>
 
 <template>
@@ -69,11 +96,19 @@ const getEstadoBadgeClass = (estado) => {
         </template>
 
         <div class="py-12">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
+                <!-- Tabla de Viajes En Curso -->
                 <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--bg-secondary);">
                     <div class="p-6">
-                        <!-- Tabla de viajes -->
-                        <div v-if="viajes.length > 0" class="overflow-x-auto">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoBadgeClass('en_curso')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                En Curso
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary);">
+                                ({{ viajesEnCurso.length }})
+                            </span>
+                        </h3>
+                        <div v-if="viajesEnCurso.length > 0" class="overflow-x-auto">
                             <table class="min-w-full divide-y" style="border-color: var(--border-primary);">
                                 <thead>
                                     <tr style="background-color: var(--bg-primary);">
@@ -82,12 +117,11 @@ const getEstadoBadgeClass = (estado) => {
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Asientos</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Estado</th>
                                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y" style="border-color: var(--border-primary);">
-                                    <tr v-for="viaje in viajes" :key="viaje.id" style="background-color: var(--bg-secondary);">
+                                    <tr v-for="viaje in viajesEnCurso" :key="viaje.id" style="background-color: var(--bg-secondary);">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium" style="color: var(--text-primary);">{{ viaje.ruta.nombre }}</div>
                                             <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
@@ -104,25 +138,9 @@ const getEstadoBadgeClass = (estado) => {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getEstadoBadgeClass(viaje.estado)">
-                                                {{ viaje.estado }}
-                                            </span>
-                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex justify-end gap-2">
-                                                <!-- Cambiar estado -->
                                                 <button
-                                                    v-if="viaje.estado === 'programado'"
-                                                    @click="cambiarEstado(viaje.id, 'en_curso')"
-                                                    class="px-3 py-1 rounded text-white transition-all hover:opacity-80 text-xs"
-                                                    style="background-color: #f59e0b;"
-                                                    title="Iniciar viaje"
-                                                >
-                                                    Iniciar
-                                                </button>
-                                                <button
-                                                    v-if="viaje.estado === 'en_curso'"
                                                     @click="cambiarEstado(viaje.id, 'finalizado')"
                                                     class="px-3 py-1 rounded text-white transition-all hover:opacity-80 text-xs"
                                                     style="background-color: #10b981;"
@@ -130,9 +148,72 @@ const getEstadoBadgeClass = (estado) => {
                                                 >
                                                     Finalizar
                                                 </button>
-                                                
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary);">
+                                No hay viajes en curso
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Viajes Programados -->
+                <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--bg-secondary);">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoBadgeClass('programado')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                Programado
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary);">
+                                ({{ viajesProgramados.length }})
+                            </span>
+                        </h3>
+                        <div v-if="viajesProgramados.length > 0" class="overflow-x-auto">
+                            <table class="min-w-full divide-y" style="border-color: var(--border-primary);">
+                                <thead>
+                                    <tr style="background-color: var(--bg-primary);">
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Asientos</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" style="border-color: var(--border-primary);">
+                                    <tr v-for="viaje in viajesProgramados" :key="viaje.id" style="background-color: var(--bg-secondary);">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium" style="color: var(--text-primary);">{{ viaje.ruta.nombre }}</div>
+                                            <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ viaje.vehiculo.placa }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ formatearFecha(viaje.fecha_salida) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
+                                            Bs {{ viaje.precio }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <div class="flex justify-end gap-2">
+                                                <button
+                                                    @click="cambiarEstado(viaje.id, 'en_curso')"
+                                                    class="px-3 py-1 rounded text-white transition-all hover:opacity-80 text-xs"
+                                                    style="background-color: #f59e0b;"
+                                                    title="Iniciar viaje"
+                                                >
+                                                    Iniciar
+                                                </button>
                                                 <Link
-                                                    v-if="viaje.estado === 'programado'"
                                                     :href="route('viajes.edit', viaje.id)"
                                                     class="px-3 py-1 rounded text-white transition-all hover:opacity-80"
                                                     style="background-color: var(--secondary-600);"
@@ -140,7 +221,7 @@ const getEstadoBadgeClass = (estado) => {
                                                     Editar
                                                 </Link>
                                                 <button
-                                                    v-if="viaje.estado === 'programado' && (viaje.boletos_count || 0) === 0"
+                                                    v-if="(viaje.boletos_count || 0) === 0"
                                                     @click="deleteViaje(viaje.id)"
                                                     class="px-3 py-1 rounded text-white transition-all hover:opacity-80"
                                                     style="background-color: #dc2626;"
@@ -153,23 +234,119 @@ const getEstadoBadgeClass = (estado) => {
                                 </tbody>
                             </table>
                         </div>
-
-                        <!-- Sin viajes -->
-                        <div v-else class="text-center py-12">
-                            <div class="text-6xl mb-4">🚌</div>
-                            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary);">
                                 No hay viajes programados
-                            </h3>
-                            <p class="mb-4" style="color: var(--text-secondary);">
-                                Comienza creando tu primer viaje
                             </p>
-                            <Link
-                                :href="route('viajes.create')"
-                                class="inline-block px-4 py-2 rounded-lg text-white font-semibold transition-all hover:opacity-90"
-                                style="background-color: var(--primary-600);"
-                            >
-                                + Nuevo Viaje
-                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Viajes Finalizados -->
+                <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--bg-secondary);">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoBadgeClass('finalizado')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                Finalizado
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary);">
+                                ({{ viajesFinalizados.length }})
+                            </span>
+                        </h3>
+                        <div v-if="viajesFinalizados.length > 0" class="overflow-x-auto">
+                            <table class="min-w-full divide-y" style="border-color: var(--border-primary);">
+                                <thead>
+                                    <tr style="background-color: var(--bg-primary);">
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Asientos</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Llegada</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" style="border-color: var(--border-primary);">
+                                    <tr v-for="viaje in viajesFinalizados" :key="viaje.id" style="background-color: var(--bg-secondary);">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium" style="color: var(--text-primary);">{{ viaje.ruta.nombre }}</div>
+                                            <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ viaje.vehiculo.placa }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ formatearFecha(viaje.fecha_salida) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
+                                            Bs {{ viaje.precio }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            <span v-if="viaje.fecha_llegada">{{ formatearFecha(viaje.fecha_llegada) }}</span>
+                                            <span v-else class="text-gray-400">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary);">
+                                No hay viajes finalizados
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Viajes Cancelados -->
+                <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--bg-secondary);">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span :class="getEstadoBadgeClass('cancelado')" class="px-3 py-1 text-sm rounded-full font-medium mr-3">
+                                Cancelado
+                            </span>
+                            <span class="text-sm font-normal" style="color: var(--text-secondary);">
+                                ({{ viajesCancelados.length }})
+                            </span>
+                        </h3>
+                        <div v-if="viajesCancelados.length > 0" class="overflow-x-auto">
+                            <table class="min-w-full divide-y" style="border-color: var(--border-primary);">
+                                <thead>
+                                    <tr style="background-color: var(--bg-primary);">
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Asientos</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" style="border-color: var(--border-primary);">
+                                    <tr v-for="viaje in viajesCancelados" :key="viaje.id" style="background-color: var(--bg-secondary);">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium" style="color: var(--text-primary);">{{ viaje.ruta.nombre }}</div>
+                                            <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ viaje.vehiculo.placa }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ formatearFecha(viaje.fecha_salida) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
+                                            Bs {{ viaje.precio }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <p class="text-sm" style="color: var(--text-secondary);">
+                                No hay viajes cancelados
+                            </p>
                         </div>
                     </div>
                 </div>

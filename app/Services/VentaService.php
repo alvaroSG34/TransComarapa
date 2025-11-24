@@ -54,11 +54,26 @@ class VentaService
     public function crearVentaEncomienda(array $data): Venta
     {
         return DB::transaction(function () use ($data) {
+            // Calcular montos y estado según modalidad de pago
+            $montoPagadoOrigen = 0;
+            $estadoPago = 'Pendiente';
+            $modalidadPago = $data['encomienda']['modalidad_pago'] ?? 'origen';
+            
+            if ($modalidadPago === 'origen') {
+                $montoPagadoOrigen = $data['monto_total'];
+                $estadoPago = 'Pagado';
+            } elseif ($modalidadPago === 'mixto') {
+                $montoPagadoOrigen = $data['encomienda']['monto_pagado_origen'] ?? 0;
+            } elseif ($modalidadPago === 'destino') {
+                $montoPagadoOrigen = 0;
+            }
+
+            // Crear venta
             $venta = $this->ventaRepository->create([
                 'fecha' => $data['fecha'],
                 'monto_total' => $data['monto_total'],
                 'tipo' => 'Encomienda',
-                'estado_pago' => 'Pendiente',
+                'estado_pago' => $estadoPago,
                 'usuario_id' => $data['usuario_id'],
                 'vehiculo_id' => $data['vehiculo_id'],
             ]);
@@ -67,11 +82,15 @@ class VentaService
             Encomienda::create([
                 'venta_id' => $venta->id,
                 'ruta_id' => $data['encomienda']['ruta_id'],
+                'viaje_id' => $data['encomienda']['viaje_id'],
                 'peso' => $data['encomienda']['peso'],
                 'descripcion' => $data['encomienda']['descripcion'] ?? null,
                 'nombre_destinatario' => $data['encomienda']['nombre_destinatario'],
                 'img_url' => $data['encomienda']['img_url'] ?? null,
-                'modalidad_pago' => $data['encomienda']['modalidad_pago'] ?? 'origen',
+                'modalidad_pago' => $modalidadPago,
+                'metodo_pago_destino' => $data['encomienda']['metodo_pago_destino'] ?? null,
+                'monto_pagado_origen' => $montoPagadoOrigen,
+                'monto_pagado_destino' => 0,
             ]);
 
             return $venta->load('encomienda');
