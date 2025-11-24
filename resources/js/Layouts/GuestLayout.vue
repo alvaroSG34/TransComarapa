@@ -18,23 +18,38 @@ onMounted(() => {
 
 <template>
     <div
-        class="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0"
+        class="flex min-h-screen flex-col items-center justify-center bg-background pt-6 sm:pt-0 relative overflow-hidden"
     >
+        <!-- Background Pattern -->
+        <div
+            class="absolute inset-0 opacity-5 dark:opacity-10"
+            style="background-image: radial-gradient(circle at 2px 2px, rgb(var(--primary)) 1px, transparent 0); background-size: 40px 40px;"
+        ></div>
+
         <!-- Theme Switcher for Guest -->
-        <div class="absolute top-4 right-4">
+        <div class="absolute top-4 right-4 z-10">
             <ThemeSwitcher />
         </div>
-        
-        <div>
-            <Link href="/">
-                <ApplicationLogo class="h-20 w-20 fill-current text-gray-500" />
+
+        <!-- Logo -->
+        <div class="relative z-10 mb-6 sm:mb-8">
+            <Link href="/" class="block transition-transform hover:scale-105">
+                <ApplicationLogo
+                    class="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 fill-current text-primary drop-shadow-lg transition-all duration-200"
+                />
             </Link>
         </div>
 
+        <!-- Login Card -->
         <div
-            class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg"
+            class="relative z-10 w-full overflow-hidden bg-card px-8 py-10 shadow-2xl sm:max-w-md sm:rounded-2xl border border-border/50 backdrop-blur-sm"
         >
             <slot />
         </div>
+
+        <!-- Decorative Elements -->
+        <div
+            class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-20"
+        ></div>
     </div>
 </template>

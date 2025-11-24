@@ -18,7 +18,7 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::match(['patch', 'post'], '/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
     // Rutas para preferencias de tema
@@ -77,6 +77,9 @@ Route::middleware('auth')->group(function () {
         
         // Conductores - CRUD
         Route::resource('conductores', \App\Http\Controllers\ConductorController::class);
+        
+        // Secretarias - CRUD
+        Route::resource('secretarias', \App\Http\Controllers\SecretariaController::class);
         
         // Estadísticas
         Route::get('/estadisticas', [\App\Http\Controllers\EstadisticaController::class, 'index'])->name('estadisticas.index');

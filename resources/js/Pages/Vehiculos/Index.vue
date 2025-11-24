@@ -90,10 +90,20 @@ const eliminarVehiculo = (id, placa) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div v-if="vehiculo.img_url" class="flex items-center">
-                                                <img :src="vehiculo.img_url" :alt="vehiculo.placa" class="h-10 w-10 rounded object-cover">
+                                                <img 
+                                                    :src="vehiculo.img_url" 
+                                                    :alt="vehiculo.placa" 
+                                                    class="h-20 w-20 rounded-lg object-cover border-2"
+                                                    style="border-color: var(--border-color)"
+                                                    @error="$event.target.style.display='none'"
+                                                >
                                             </div>
-                                            <div v-else class="text-sm" style="color: var(--text-secondary)">
-                                                Sin imagen
+                                            <div v-else class="flex items-center">
+                                                <div class="h-20 w-20 rounded-lg flex items-center justify-center border-2" style="background-color: var(--input-bg); border-color: var(--border-color)">
+                                                    <svg class="h-10 w-10" style="color: var(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                                    </svg>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">

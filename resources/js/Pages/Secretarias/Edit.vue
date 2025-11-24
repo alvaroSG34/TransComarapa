@@ -5,23 +5,23 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
 
 const props = defineProps({
-    conductor: Object
+    secretaria: Object
 });
 
 useHtml5Validation();
 
 const form = useForm({
-    nombre: props.conductor.nombre,
-    apellido: props.conductor.apellido,
-    ci: props.conductor.ci,
-    telefono: props.conductor.telefono || '',
-    correo: props.conductor.correo,
+    nombre: props.secretaria.nombre,
+    apellido: props.secretaria.apellido,
+    ci: props.secretaria.ci,
+    telefono: props.secretaria.telefono || '',
+    correo: props.secretaria.correo,
     password: '',
     password_confirmation: '',
     avatar: null
 });
 
-const avatarPreview = ref(props.conductor.img_url || null);
+const avatarPreview = ref(props.secretaria.img_url || null);
 const fileInput = ref(null);
 
 const handleFileChange = (event) => {
@@ -52,7 +52,7 @@ const handleFileChange = (event) => {
 
 const removeAvatar = () => {
     form.avatar = null;
-    avatarPreview.value = props.conductor.img_url || null;
+    avatarPreview.value = props.secretaria.img_url || null;
     if (fileInput.value) {
         fileInput.value.value = '';
     }
@@ -68,7 +68,7 @@ const submit = () => {
         });
         formData.append('_method', 'PUT');
         return formData;
-    }).post(route('conductores.update', props.conductor.id), {
+    }).post(route('secretarias.update', props.secretaria.id), {
         preserveScroll: true,
         onSuccess: () => {
             if (fileInput.value) {
@@ -80,12 +80,12 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Editar Conductor" />
+    <Head title="Editar Secretaria" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl" style="color: var(--text-primary)">
-                Editar Conductor
+                Editar Secretaria
             </h2>
         </template>
 
@@ -301,7 +301,7 @@ const submit = () => {
                             <!-- Botones de Acción -->
                             <div class="flex items-center justify-end space-x-4 pt-4 border-t" style="border-color: var(--border-color)">
                                 <a
-                                    :href="route('conductores.index')"
+                                    :href="route('secretarias.index')"
                                     class="px-4 py-2 rounded-md text-sm font-medium"
                                     style="background-color: var(--button-secondary-bg); color: var(--button-secondary-text)"
                                 >
@@ -314,7 +314,7 @@ const submit = () => {
                                     style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
                                     :class="{ 'opacity-50 cursor-not-allowed': form.processing }"
                                 >
-                                    {{ form.processing ? 'Guardando...' : 'Actualizar Conductor' }}
+                                    {{ form.processing ? 'Guardando...' : 'Actualizar Secretaria' }}
                                 </button>
                             </div>
                         </form>
@@ -324,3 +324,4 @@ const submit = () => {
         </div>
     </AuthenticatedLayout>
 </template>
+

@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
@@ -15,12 +16,63 @@ const form = useForm({
     marca: props.vehiculo.marca,
     modelo: props.vehiculo.modelo,
     conductor_id: props.vehiculo.conductor_id || '',
-    img_url: props.vehiculo.img_url || ''
+    avatar: null
 });
 
+const imagePreview = ref(props.vehiculo.img_url || null);
+const fileInput = ref(null);
+
+const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        // Validar tipo de archivo
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen válida');
+            return;
+        }
+        
+        // Validar tamaño (2MB)
+        if (file.size > 2048 * 1024) {
+            alert('La imagen debe ser menor a 2MB');
+            return;
+        }
+        
+        form.avatar = file;
+        
+        // Crear vista previa
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagePreview.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+const removeImage = () => {
+    form.avatar = null;
+    imagePreview.value = props.vehiculo.img_url || null;
+    if (fileInput.value) {
+        fileInput.value.value = '';
+    }
+};
+
 const submit = () => {
-    form.put(route('vehiculos.update', props.vehiculo.id), {
-        preserveScroll: true
+    form.transform((data) => {
+        const formData = new FormData();
+        Object.keys(data).forEach(key => {
+            if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+                formData.append(key, data[key]);
+            }
+        });
+        formData.append('_method', 'PUT');
+        return formData;
+    }).post(route('vehiculos.update', props.vehiculo.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (fileInput.value) {
+                fileInput.value.value = '';
+            }
+        }
     });
 };
 </script>
@@ -137,33 +189,52 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- URL de Imagen -->
+                            <!-- Imagen del Vehículo (Opcional) -->
                             <div>
-                                <label for="img_url" class="block text-sm font-medium mb-2">
-                                    URL de Imagen
+                                <label for="avatar" class="block text-sm font-medium mb-2">
+                                    Imagen del Vehículo (Opcional)
                                 </label>
-                                <input
-                                    id="img_url"
-                                    type="url"
-                                    v-model="form.img_url"
-                                    maxlength="255"
-                                    placeholder="https://ejemplo.com/imagen.jpg"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
-                                    :class="{ 'border-red-500': form.errors.img_url }"
-                                />
-                                <p v-if="form.errors.img_url" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.img_url }}
-                                </p>
-                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                    URL de la imagen del vehículo (opcional)
-                                </p>
-                                
-                                <!-- Vista previa de imagen -->
-                                <div v-if="form.img_url" class="mt-3">
-                                    <p class="text-sm font-medium mb-2">Vista previa:</p>
-                                    <img :src="form.img_url" alt="Vista previa" class="h-32 w-32 object-cover rounded border" style="border-color: var(--border-color)" @error="$event.target.style.display='none'">
+                                <div class="mt-2">
+                                    <input
+                                        ref="fileInput"
+                                        id="avatar"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif"
+                                        @change="handleFileChange"
+                                        class="block w-full text-sm"
+                                        style="color: var(--text-primary)"
+                                    />
+                                    <p class="mt-1 text-xs" style="color: var(--text-secondary)">
+                                        PNG, JPG, GIF hasta 2MB. Deje vacío para mantener la imagen actual.
+                                    </p>
+                                    <button
+                                        v-if="imagePreview && form.avatar"
+                                        type="button"
+                                        @click="removeImage"
+                                        class="mt-2 text-sm text-red-600 hover:text-red-800"
+                                    >
+                                        Cancelar cambio
+                                    </button>
                                 </div>
+                                
+                                <!-- Vista previa de imagen (más grande) -->
+                                <div v-if="imagePreview" class="mt-4">
+                                    <p class="text-sm font-medium mb-3" style="color: var(--text-primary)">
+                                        Vista previa:
+                                    </p>
+                                    <div class="flex justify-center">
+                                        <img
+                                            :src="imagePreview"
+                                            alt="Vista previa del vehículo"
+                                            class="max-w-md w-full h-auto object-cover rounded-lg border-2 shadow-md"
+                                            style="border-color: var(--border-color); max-height: 400px;"
+                                            @error="$event.target.style.display='none'"
+                                        />
+                                    </div>
+                                </div>
+                                <p v-if="form.errors.avatar" class="mt-1 text-sm text-red-600">
+                                    {{ form.errors.avatar }}
+                                </p>
                             </div>
 
                             <!-- Botones de Acción -->

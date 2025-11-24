@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
-class ConductorController extends Controller
+class SecretariaController extends Controller
 {
     protected $usuarioRepository;
 
@@ -23,10 +23,10 @@ class ConductorController extends Controller
      */
     public function index()
     {
-        $conductores = $this->usuarioRepository->findByRol('Conductor');
+        $secretarias = $this->usuarioRepository->findByRol('Secretaria');
         
-        return Inertia::render('Conductores/Index', [
-            'conductores' => $conductores
+        return Inertia::render('Secretarias/Index', [
+            'secretarias' => $secretarias
         ]);
     }
 
@@ -35,7 +35,7 @@ class ConductorController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Conductores/Create');
+        return Inertia::render('Secretarias/Create');
     }
 
     /**
@@ -49,18 +49,18 @@ class ConductorController extends Controller
             'ci' => 'required|string|max:20|unique:usuarios,ci',
             'telefono' => 'nullable|string|max:20',
             'correo' => 'required|email|max:255|unique:usuarios,correo',
+            'password' => 'required|string|min:8|confirmed',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
         ]);
 
-        $validated['rol'] = 'Conductor';
-        // Asignar contraseña por defecto
-        $validated['password'] = Hash::make('contrasena123');
+        $validated['rol'] = 'Secretaria';
+        $validated['password'] = Hash::make($validated['password']);
 
         // Manejar subida de imagen de perfil (opcional)
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             // Usaremos un ID temporal, luego lo actualizaremos después de crear el usuario
-            $filename = 'conductor-temp-' . time() . '.' . $file->getClientOriginalExtension();
+            $filename = 'secretaria-temp-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('profiles', $filename, 'public');
             $validated['img_url'] = '/storage/' . $path;
         }
@@ -81,8 +81,8 @@ class ConductorController extends Controller
             }
         }
 
-        return redirect()->route('conductores.index')
-            ->with('success', 'Conductor registrado exitosamente.');
+        return redirect()->route('secretarias.index')
+            ->with('success', 'Secretaria registrada exitosamente.');
     }
 
     /**
@@ -90,15 +90,15 @@ class ConductorController extends Controller
      */
     public function show(string $id)
     {
-        $conductor = $this->usuarioRepository->find($id);
+        $secretaria = $this->usuarioRepository->find($id);
 
-        if (!$conductor || $conductor->rol !== 'Conductor') {
-            return redirect()->route('conductores.index')
-                ->with('error', 'Conductor no encontrado.');
+        if (!$secretaria || $secretaria->rol !== 'Secretaria') {
+            return redirect()->route('secretarias.index')
+                ->with('error', 'Secretaria no encontrada.');
         }
 
-        return Inertia::render('Conductores/Show', [
-            'conductor' => $conductor
+        return Inertia::render('Secretarias/Show', [
+            'secretaria' => $secretaria
         ]);
     }
 
@@ -107,15 +107,15 @@ class ConductorController extends Controller
      */
     public function edit(string $id)
     {
-        $conductor = $this->usuarioRepository->find($id);
+        $secretaria = $this->usuarioRepository->find($id);
 
-        if (!$conductor || $conductor->rol !== 'Conductor') {
-            return redirect()->route('conductores.index')
-                ->with('error', 'Conductor no encontrado.');
+        if (!$secretaria || $secretaria->rol !== 'Secretaria') {
+            return redirect()->route('secretarias.index')
+                ->with('error', 'Secretaria no encontrada.');
         }
 
-        return Inertia::render('Conductores/Edit', [
-            'conductor' => $conductor
+        return Inertia::render('Secretarias/Edit', [
+            'secretaria' => $secretaria
         ]);
     }
 
@@ -124,11 +124,11 @@ class ConductorController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $conductor = $this->usuarioRepository->find($id);
+        $secretaria = $this->usuarioRepository->find($id);
 
-        if (!$conductor || $conductor->rol !== 'Conductor') {
-            return redirect()->route('conductores.index')
-                ->with('error', 'Conductor no encontrado.');
+        if (!$secretaria || $secretaria->rol !== 'Secretaria') {
+            return redirect()->route('secretarias.index')
+                ->with('error', 'Secretaria no encontrada.');
         }
 
         $validated = $request->validate([
@@ -151,8 +151,8 @@ class ConductorController extends Controller
         // Manejar subida de imagen de perfil (opcional)
         if ($request->hasFile('avatar')) {
             // Eliminar imagen anterior si existe (solo si es local)
-            if ($conductor->img_url && str_contains($conductor->img_url, '/storage/')) {
-                $oldPath = str_replace('/storage/', '', $conductor->img_url);
+            if ($secretaria->img_url && str_contains($secretaria->img_url, '/storage/')) {
+                $oldPath = str_replace('/storage/', '', $secretaria->img_url);
                 $oldPath = ltrim($oldPath, '/');
                 if ($oldPath) {
                     Storage::disk('public')->delete($oldPath);
@@ -161,15 +161,15 @@ class ConductorController extends Controller
 
             // Guardar nueva imagen
             $file = $request->file('avatar');
-            $filename = 'user-' . $conductor->id . '-' . time() . '.' . $file->getClientOriginalExtension();
+            $filename = 'user-' . $secretaria->id . '-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('profiles', $filename, 'public');
             $validated['img_url'] = '/storage/' . $path;
         }
 
         $this->usuarioRepository->update($id, $validated);
 
-        return redirect()->route('conductores.index')
-            ->with('success', 'Conductor actualizado exitosamente.');
+        return redirect()->route('secretarias.index')
+            ->with('success', 'Secretaria actualizada exitosamente.');
     }
 
     /**
@@ -177,22 +177,17 @@ class ConductorController extends Controller
      */
     public function destroy(string $id)
     {
-        $conductor = $this->usuarioRepository->find($id);
+        $secretaria = $this->usuarioRepository->find($id);
 
-        if (!$conductor || $conductor->rol !== 'Conductor') {
-            return redirect()->route('conductores.index')
-                ->with('error', 'Conductor no encontrado.');
-        }
-
-        // Verificar si tiene vehículos asignados
-        if ($conductor->vehiculos()->count() > 0) {
-            return redirect()->route('conductores.index')
-                ->with('error', 'No se puede eliminar el conductor porque tiene vehículos asignados.');
+        if (!$secretaria || $secretaria->rol !== 'Secretaria') {
+            return redirect()->route('secretarias.index')
+                ->with('error', 'Secretaria no encontrada.');
         }
 
         $this->usuarioRepository->delete($id);
 
-        return redirect()->route('conductores.index')
-            ->with('success', 'Conductor eliminado exitosamente.');
+        return redirect()->route('secretarias.index')
+            ->with('success', 'Secretaria eliminada exitosamente.');
     }
 }
+

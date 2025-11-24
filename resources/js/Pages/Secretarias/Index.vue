@@ -3,12 +3,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 
 const props = defineProps({
-    conductores: Array
+    secretarias: Array
 });
 
-const eliminarConductor = (id, nombre, apellido) => {
-    if (confirm(`¿Está seguro de eliminar al conductor ${nombre} ${apellido}?`)) {
-        router.delete(route('conductores.destroy', id), {
+const eliminarSecretaria = (id, nombre, apellido) => {
+    if (confirm(`¿Está seguro de eliminar a la secretaria ${nombre} ${apellido}?`)) {
+        router.delete(route('secretarias.destroy', id), {
             preserveScroll: true
         });
     }
@@ -16,20 +16,20 @@ const eliminarConductor = (id, nombre, apellido) => {
 </script>
 
 <template>
-    <Head title="Conductores" />
+    <Head title="Secretarias" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl" style="color: var(--text-primary)">
-                    Conductores
+                    Secretarias
                 </h2>
                 <a
-                    :href="route('conductores.create')"
+                    :href="route('secretarias.create')"
                     class="px-4 py-2 rounded-md text-sm font-medium"
                     style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
                 >
-                    + Nuevo Conductor
+                    + Nueva Secretaria
                 </a>
             </div>
         </template>
@@ -38,8 +38,8 @@ const eliminarConductor = (id, nombre, apellido) => {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
                     <div class="p-6" style="color: var(--text-primary)">
-                        <!-- Lista de Conductores -->
-                        <div v-if="conductores.length > 0" class="overflow-x-auto">
+                        <!-- Lista de Secretarias -->
+                        <div v-if="secretarias.length > 0" class="overflow-x-auto">
                             <table class="min-w-full divide-y" style="border-color: var(--border-color)">
                                 <thead>
                                     <tr style="background-color: var(--header-bg)">
@@ -64,24 +64,24 @@ const eliminarConductor = (id, nombre, apellido) => {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y" style="border-color: var(--border-color)">
-                                    <tr v-for="conductor in conductores" :key="conductor.id" class="hover:bg-opacity-50" style="background-color: var(--card-bg)">
+                                    <tr v-for="secretaria in secretarias" :key="secretaria.id" class="hover:bg-opacity-50" style="background-color: var(--card-bg)">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <div class="h-16 w-16 flex-shrink-0 relative">
                                                     <img
-                                                        v-if="conductor.img_url"
-                                                        :src="conductor.img_url"
-                                                        :alt="conductor.nombre + ' ' + conductor.apellido"
+                                                        v-if="secretaria.img_url"
+                                                        :src="secretaria.img_url"
+                                                        :alt="secretaria.nombre + ' ' + secretaria.apellido"
                                                         class="h-16 w-16 rounded-full object-cover border-2"
                                                         style="border-color: var(--border-color)"
                                                         @error="$event.target.style.display='none'"
                                                     />
                                                     <div
-                                                        v-if="!conductor.img_url"
+                                                        v-if="!secretaria.img_url"
                                                         class="h-16 w-16 rounded-full flex items-center justify-center"
                                                         style="background-color: var(--input-bg)"
                                                     >
-                                                        <svg class="h-6 w-6" style="color: var(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="h-10 w-10" style="color: var(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                         </svg>
                                                     </div>
@@ -90,34 +90,34 @@ const eliminarConductor = (id, nombre, apellido) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium" style="color: var(--text-primary)">
-                                                {{ conductor.nombre }} {{ conductor.apellido }}
+                                                {{ secretaria.nombre }} {{ secretaria.apellido }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm" style="color: var(--text-primary)">
-                                                {{ conductor.ci }}
+                                                {{ secretaria.ci }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm" style="color: var(--text-primary)">
-                                                {{ conductor.telefono || 'N/A' }}
+                                                {{ secretaria.telefono || 'N/A' }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm" style="color: var(--text-secondary)">
-                                                {{ conductor.correo }}
+                                                {{ secretaria.correo }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <a
-                                                :href="route('conductores.edit', conductor.id)"
+                                                :href="route('secretarias.edit', secretaria.id)"
                                                 class="inline-block px-3 py-1 rounded text-sm"
                                                 style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
                                             >
                                                 Editar
                                             </a>
                                             <button
-                                                @click="eliminarConductor(conductor.id, conductor.nombre, conductor.apellido)"
+                                                @click="eliminarSecretaria(secretaria.id, secretaria.nombre, secretaria.apellido)"
                                                 class="inline-block px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700"
                                             >
                                                 Eliminar
@@ -134,18 +134,18 @@ const eliminarConductor = (id, nombre, apellido) => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                             <h3 class="mt-2 text-sm font-medium" style="color: var(--text-primary)">
-                                No hay conductores registrados
+                                No hay secretarias registradas
                             </h3>
                             <p class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                Comienza registrando un nuevo conductor.
+                                Comienza registrando una nueva secretaria.
                             </p>
                             <div class="mt-6">
                                 <a
-                                    :href="route('conductores.create')"
+                                    :href="route('secretarias.create')"
                                     class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium"
                                     style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
                                 >
-                                    + Nuevo Conductor
+                                    + Nueva Secretaria
                                 </a>
                             </div>
                         </div>
@@ -155,3 +155,4 @@ const eliminarConductor = (id, nombre, apellido) => {
         </div>
     </AuthenticatedLayout>
 </template>
+

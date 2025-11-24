@@ -32,6 +32,7 @@ const navigationLinks = computed(() => {
             ...(role === 'Admin' ? [
                 { name: 'Vehículos', route: 'vehiculos.index' },
                 { name: 'Conductores', route: 'conductores.index' },
+                { name: 'Secretarias', route: 'secretarias.index' },
                 { name: 'Estadísticas', route: 'estadisticas.index' }
             ] : [])
         ];
@@ -63,9 +64,9 @@ onMounted(() => {
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
+                                <Link :href="route('dashboard')" class="flex items-center">
                                     <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
+                                        class="block h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 fill-current text-gray-800 transition-all duration-200 hover:opacity-80"
                                     />
                                 </Link>
                             </div>

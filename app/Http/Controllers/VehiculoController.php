@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\Contracts\VehiculoRepositoryInterface;
 use App\Repositories\Contracts\UsuarioRepositoryInterface;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class VehiculoController extends Controller
@@ -56,8 +57,16 @@ class VehiculoController extends Controller
             'marca' => 'required|string|max:50',
             'modelo' => 'required|string|max:50',
             'conductor_id' => 'nullable|exists:usuarios,id',
-            'img_url' => 'nullable|string|max:255',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
         ]);
+
+        // Manejar subida de imagen de vehículo (opcional)
+        if ($request->hasFile('avatar')) {
+            $file = $request->file('avatar');
+            $filename = 'vehiculo-' . time() . '-' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('vehiculos', $filename, 'public');
+            $validated['img_url'] = '/storage/' . $path;
+        }
 
         $this->vehiculoRepository->create($validated);
 
@@ -107,13 +116,33 @@ class VehiculoController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $vehiculo = $this->vehiculoRepository->find($id);
+
         $validated = $request->validate([
             'placa' => 'required|string|max:20|unique:vehiculos,placa,' . $id,
             'marca' => 'required|string|max:50',
             'modelo' => 'required|string|max:50',
             'conductor_id' => 'nullable|exists:usuarios,id',
-            'img_url' => 'nullable|string|max:255',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
         ]);
+
+        // Manejar subida de imagen de vehículo (opcional)
+        if ($request->hasFile('avatar')) {
+            // Eliminar imagen anterior si existe (solo si es local)
+            if ($vehiculo->img_url && str_contains($vehiculo->img_url, '/storage/')) {
+                $oldPath = str_replace('/storage/', '', $vehiculo->img_url);
+                $oldPath = ltrim($oldPath, '/');
+                if ($oldPath) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+
+            // Guardar nueva imagen
+            $file = $request->file('avatar');
+            $filename = 'vehiculo-' . $id . '-' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('vehiculos', $filename, 'public');
+            $validated['img_url'] = '/storage/' . $path;
+        }
 
         $updated = $this->vehiculoRepository->update($id, $validated);
 

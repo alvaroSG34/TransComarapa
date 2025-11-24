@@ -4,24 +4,20 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
 
-const props = defineProps({
-    conductor: Object
-});
-
 useHtml5Validation();
 
 const form = useForm({
-    nombre: props.conductor.nombre,
-    apellido: props.conductor.apellido,
-    ci: props.conductor.ci,
-    telefono: props.conductor.telefono || '',
-    correo: props.conductor.correo,
+    nombre: '',
+    apellido: '',
+    ci: '',
+    telefono: '',
+    correo: '',
     password: '',
     password_confirmation: '',
     avatar: null
 });
 
-const avatarPreview = ref(props.conductor.img_url || null);
+const avatarPreview = ref(null);
 const fileInput = ref(null);
 
 const handleFileChange = (event) => {
@@ -52,7 +48,7 @@ const handleFileChange = (event) => {
 
 const removeAvatar = () => {
     form.avatar = null;
-    avatarPreview.value = props.conductor.img_url || null;
+    avatarPreview.value = null;
     if (fileInput.value) {
         fileInput.value.value = '';
     }
@@ -62,13 +58,12 @@ const submit = () => {
     form.transform((data) => {
         const formData = new FormData();
         Object.keys(data).forEach(key => {
-            if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+            if (data[key] !== null && data[key] !== undefined) {
                 formData.append(key, data[key]);
             }
         });
-        formData.append('_method', 'PUT');
         return formData;
-    }).post(route('conductores.update', props.conductor.id), {
+    }).post(route('secretarias.store'), {
         preserveScroll: true,
         onSuccess: () => {
             if (fileInput.value) {
@@ -80,12 +75,12 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Editar Conductor" />
+    <Head title="Nueva Secretaria" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl" style="color: var(--text-primary)">
-                Editar Conductor
+                Registrar Nueva Secretaria
             </h2>
         </template>
 
@@ -229,15 +224,15 @@ const submit = () => {
                                             style="color: var(--text-primary)"
                                         />
                                         <p class="mt-1 text-xs" style="color: var(--text-secondary)">
-                                            PNG, JPG, GIF hasta 2MB. Deje vacío para mantener la imagen actual.
+                                            PNG, JPG, GIF hasta 2MB
                                         </p>
                                         <button
-                                            v-if="avatarPreview && form.avatar"
+                                            v-if="avatarPreview"
                                             type="button"
                                             @click="removeAvatar"
                                             class="mt-2 text-sm text-red-600 hover:text-red-800"
                                         >
-                                            Cancelar cambio
+                                            Eliminar imagen
                                         </button>
                                     </div>
                                 </div>
@@ -246,62 +241,55 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <div class="border-t pt-6" style="border-color: var(--border-color)">
-                                <h3 class="text-lg font-medium mb-4" style="color: var(--text-primary)">
-                                    Cambiar Contraseña (Opcional)
-                                </h3>
-                                <p class="text-sm mb-4" style="color: var(--text-secondary)">
-                                    Deje estos campos vacíos si no desea cambiar la contraseña
-                                </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Contraseña -->
+                                <div>
+                                    <label for="password" class="block text-sm font-medium mb-2">
+                                        Contraseña *
+                                    </label>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        v-model="form.password"
+                                        required
+                                        minlength="8"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                        :class="{ 'border-red-500': form.errors.password }"
+                                    />
+                                    <p v-if="form.errors.password" class="mt-1 text-sm text-red-600">
+                                        {{ form.errors.password }}
+                                    </p>
+                                    <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                        Mínimo 8 caracteres
+                                    </p>
+                                </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <!-- Nueva Contraseña -->
-                                    <div>
-                                        <label for="password" class="block text-sm font-medium mb-2">
-                                            Nueva Contraseña
-                                        </label>
-                                        <input
-                                            id="password"
-                                            type="password"
-                                            v-model="form.password"
-                                            minlength="8"
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                            style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
-                                            :class="{ 'border-red-500': form.errors.password }"
-                                        />
-                                        <p v-if="form.errors.password" class="mt-1 text-sm text-red-600">
-                                            {{ form.errors.password }}
-                                        </p>
-                                        <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                            Mínimo 8 caracteres
-                                        </p>
-                                    </div>
-
-                                    <!-- Confirmar Nueva Contraseña -->
-                                    <div>
-                                        <label for="password_confirmation" class="block text-sm font-medium mb-2">
-                                            Confirmar Nueva Contraseña
-                                        </label>
-                                        <input
-                                            id="password_confirmation"
-                                            type="password"
-                                            v-model="form.password_confirmation"
-                                            minlength="8"
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                            style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
-                                            :class="{ 'border-red-500': form.errors.password_confirmation }"
-                                        />
-                                        <p v-if="form.errors.password_confirmation" class="mt-1 text-sm text-red-600">
-                                            {{ form.errors.password_confirmation }}
-                                        </p>
-                                    </div>
+                                <!-- Confirmar Contraseña -->
+                                <div>
+                                    <label for="password_confirmation" class="block text-sm font-medium mb-2">
+                                        Confirmar Contraseña *
+                                    </label>
+                                    <input
+                                        id="password_confirmation"
+                                        type="password"
+                                        v-model="form.password_confirmation"
+                                        required
+                                        minlength="8"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                        :class="{ 'border-red-500': form.errors.password_confirmation }"
+                                    />
+                                    <p v-if="form.errors.password_confirmation" class="mt-1 text-sm text-red-600">
+                                        {{ form.errors.password_confirmation }}
+                                    </p>
                                 </div>
                             </div>
 
                             <!-- Botones de Acción -->
                             <div class="flex items-center justify-end space-x-4 pt-4 border-t" style="border-color: var(--border-color)">
                                 <a
-                                    :href="route('conductores.index')"
+                                    :href="route('secretarias.index')"
                                     class="px-4 py-2 rounded-md text-sm font-medium"
                                     style="background-color: var(--button-secondary-bg); color: var(--button-secondary-text)"
                                 >
@@ -314,7 +302,7 @@ const submit = () => {
                                     style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
                                     :class="{ 'opacity-50 cursor-not-allowed': form.processing }"
                                 >
-                                    {{ form.processing ? 'Guardando...' : 'Actualizar Conductor' }}
+                                    {{ form.processing ? 'Guardando...' : 'Registrar Secretaria' }}
                                 </button>
                             </div>
                         </form>
@@ -324,3 +312,4 @@ const submit = () => {
         </div>
     </AuthenticatedLayout>
 </template>
+
