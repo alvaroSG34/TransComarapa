@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BuscadorCliente from '@/Components/BuscadorCliente.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
 
 const props = defineProps({
@@ -21,11 +21,48 @@ const form = useForm({
     peso: props.encomienda.peso,
     descripcion: props.encomienda.descripcion || '',
     nombre_destinatario: props.encomienda.nombre_destinatario,
-    img_url: props.encomienda.img_url || '',
+    avatar: null,
     modalidad_pago: props.encomienda.modalidad_pago,
     precio: props.encomienda.precio,
     monto_pagado_origen: props.encomienda.monto_pagado_origen || ''
 });
+
+const imagePreview = ref(props.encomienda.img_url || null);
+const fileInput = ref(null);
+
+const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        // Validar tipo de archivo
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen válida');
+            return;
+        }
+        
+        // Validar tamaño (2MB)
+        if (file.size > 2048 * 1024) {
+            alert('La imagen debe ser menor a 2MB');
+            return;
+        }
+        
+        form.avatar = file;
+        
+        // Crear vista previa
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagePreview.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+const removeImage = () => {
+    form.avatar = null;
+    imagePreview.value = props.encomienda.img_url || null;
+    if (fileInput.value) {
+        fileInput.value.value = '';
+    }
+};
 
 const viajesDisponibles = computed(() => {
     if (!form.ruta_id) return [];
@@ -37,8 +74,22 @@ const viajeSeleccionado = computed(() => {
 });
 
 const submit = () => {
-    form.put(route('encomiendas.update', props.encomienda.venta_id), {
-        preserveScroll: true
+    form.transform((data) => {
+        const formData = new FormData();
+        Object.keys(data).forEach(key => {
+            if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+                formData.append(key, data[key]);
+            }
+        });
+        formData.append('_method', 'PUT');
+        return formData;
+    }).post(route('encomiendas.update', props.encomienda.venta_id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (fileInput.value) {
+                fileInput.value.value = '';
+            }
+        }
     });
 };
 </script>
@@ -335,33 +386,52 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- URL de Imagen del Paquete -->
+                            <!-- Imagen del Paquete (Opcional) -->
                             <div>
-                                <label for="img_url" class="block text-sm font-medium mb-2">
-                                    URL de Foto del Paquete
+                                <label for="avatar" class="block text-sm font-medium mb-2">
+                                    Foto del Paquete (Opcional)
                                 </label>
-                                <input
-                                    id="img_url"
-                                    type="url"
-                                    v-model="form.img_url"
-                                    maxlength="255"
-                                    placeholder="https://ejemplo.com/foto-paquete.jpg"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
-                                    :class="{ 'border-red-500': form.errors.img_url }"
-                                />
-                                <p v-if="form.errors.img_url" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.img_url }}
-                                </p>
-                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                    Opcional - URL de la foto del paquete para registro
-                                </p>
-                                
-                                <!-- Vista previa de imagen -->
-                                <div v-if="form.img_url" class="mt-3">
-                                    <p class="text-sm font-medium mb-2">Vista previa:</p>
-                                    <img :src="form.img_url" alt="Vista previa del paquete" class="h-48 w-auto object-cover rounded border" style="border-color: var(--border-color)" @error="$event.target.style.display='none'">
+                                <div class="mt-2">
+                                    <input
+                                        ref="fileInput"
+                                        id="avatar"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif"
+                                        @change="handleFileChange"
+                                        class="block w-full text-sm"
+                                        style="color: var(--text-primary)"
+                                    />
+                                    <p class="mt-1 text-xs" style="color: var(--text-secondary)">
+                                        PNG, JPG, GIF hasta 2MB. Deje vacío para mantener la imagen actual.
+                                    </p>
+                                    <button
+                                        v-if="imagePreview && form.avatar"
+                                        type="button"
+                                        @click="removeImage"
+                                        class="mt-2 text-sm text-red-600 hover:text-red-800"
+                                    >
+                                        Cancelar cambio
+                                    </button>
                                 </div>
+                                
+                                <!-- Vista previa de imagen (más grande) -->
+                                <div v-if="imagePreview" class="mt-4">
+                                    <p class="text-sm font-medium mb-3" style="color: var(--text-primary)">
+                                        Vista previa:
+                                    </p>
+                                    <div class="flex justify-center">
+                                        <img
+                                            :src="imagePreview"
+                                            alt="Vista previa del paquete"
+                                            class="max-w-md w-full h-auto object-cover rounded-lg border-2 shadow-md"
+                                            style="border-color: var(--border-color); max-height: 400px;"
+                                            @error="$event.target.style.display='none'"
+                                        />
+                                    </div>
+                                </div>
+                                <p v-if="form.errors.avatar" class="mt-1 text-sm text-red-600">
+                                    {{ form.errors.avatar }}
+                                </p>
                             </div>
 
                             <!-- Resumen -->

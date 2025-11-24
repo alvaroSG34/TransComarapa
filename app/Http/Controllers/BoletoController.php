@@ -154,33 +154,40 @@ class BoletoController extends Controller
             'metodo_pago' => 'required|in:Efectivo,QR',
         ]);
 
-        return DB::transaction(function () use ($validated) {
+        // Verificar que el viaje esté disponible
+        $viaje = $this->viajeRepository->find($validated['viaje_id']);
+        
+        if (!$viaje || $viaje->estado !== 'programado') {
+            return back()->withErrors([
+                'viaje_id' => 'El viaje no está disponible para venta.'
+            ])->withInput();
+        }
+
+        // Verificar asientos disponibles
+        $boletosVendidos = DB::table('boletos')
+            ->where('viaje_id', $viaje->id)
+            ->count();
+        
+        if ($boletosVendidos >= $viaje->asientos_totales) {
+            return back()->withErrors([
+                'asiento' => 'No hay asientos disponibles en este viaje.'
+            ])->withInput();
+        }
+
+        // Verificar que el asiento no esté ocupado
+        $asientoOcupado = DB::table('boletos')
+            ->where('viaje_id', $viaje->id)
+            ->where('asiento', $validated['asiento'])
+            ->exists();
+
+        if ($asientoOcupado) {
+            return back()->withErrors([
+                'asiento' => 'El asiento número ' . $validated['asiento'] . ' ya está ocupado. Por favor seleccione otro asiento.'
+            ])->withInput();
+        }
+
+        return DB::transaction(function () use ($validated, $viaje) {
             try {
-                // Verificar que el viaje esté disponible
-                $viaje = $this->viajeRepository->find($validated['viaje_id']);
-                
-                if (!$viaje || $viaje->estado !== 'programado') {
-                    throw new \Exception('El viaje no está disponible para venta.');
-                }
-
-                // Verificar asientos disponibles
-                $boletosVendidos = DB::table('boletos')
-                    ->where('viaje_id', $viaje->id)
-                    ->count();
-                
-                if ($boletosVendidos >= $viaje->asientos_totales) {
-                    throw new \Exception('No hay asientos disponibles en este viaje.');
-                }
-
-                // Verificar que el asiento no esté ocupado
-                $asientoOcupado = DB::table('boletos')
-                    ->where('viaje_id', $viaje->id)
-                    ->where('asiento', $validated['asiento'])
-                    ->exists();
-
-                if ($asientoOcupado) {
-                    throw new \Exception('El asiento número ' . $validated['asiento'] . ' ya está ocupado.');
-                }
 
                 // Crear venta usando el servicio
                 $ventaData = [

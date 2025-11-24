@@ -12,6 +12,7 @@ use App\Models\PagoVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class EncomiendaController extends Controller
@@ -158,7 +159,7 @@ class EncomiendaController extends Controller
                 'peso' => 'required|numeric|min:0.01',
                 'descripcion' => 'nullable|string|max:500',
                 'nombre_destinatario' => 'required|string|max:150',
-                'img_url' => 'nullable|url|max:255',
+                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
                 'modalidad_pago' => 'required|in:origen,mixto,destino',
                 'precio' => 'required|numeric|min:0',
             ];
@@ -245,6 +246,16 @@ class EncomiendaController extends Controller
                     'estado_pago' => $estadoPago
                 ]);
 
+                // Manejar subida de imagen del paquete (opcional)
+                $imgUrl = null;
+                if (request()->hasFile('avatar')) {
+                    $file = request()->file('avatar');
+                    $filename = 'encomienda-' . time() . '-' . uniqid() . '.' . $file->getClientOriginalExtension();
+                    $path = $file->storeAs('encomiendas', $filename, 'public');
+                    $imgUrl = '/storage/' . $path;
+                    Log::info('Imagen del paquete guardada:', ['path' => $imgUrl]);
+                }
+
                 // Preparar datos para el servicio
                 Log::info('Preparando datos para crear venta y encomienda');
                 $ventaData = [
@@ -258,7 +269,7 @@ class EncomiendaController extends Controller
                         'peso' => $validated['peso'],
                         'descripcion' => $validated['descripcion'],
                         'nombre_destinatario' => $validated['nombre_destinatario'],
-                        'img_url' => $validated['img_url'],
+                        'img_url' => $imgUrl,
                         'modalidad_pago' => $validated['modalidad_pago'],
                         'metodo_pago_destino' => $validated['metodo_pago_destino'] ?? null,
                         'monto_pagado_origen' => $montoPagadoOrigen,
@@ -534,7 +545,7 @@ class EncomiendaController extends Controller
             'peso' => 'required|numeric|min:0.01',
             'descripcion' => 'nullable|string|max:500',
             'nombre_destinatario' => 'required|string|max:150',
-            'img_url' => 'nullable|url|max:255',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB máximo
             'modalidad_pago' => 'required|in:origen,mixto,destino',
             'precio' => 'required|numeric|min:0',
             'monto_pagado_origen' => 'required_if:modalidad_pago,mixto|nullable|numeric|min:0',
@@ -559,6 +570,30 @@ class EncomiendaController extends Controller
                 $montoPagadoOrigen = 0;
             }
 
+            // Manejar subida de imagen del paquete (opcional)
+            $imgUrl = null;
+            $encomienda = DB::table('encomiendas')->where('venta_id', $id)->first();
+            
+            if (request()->hasFile('avatar')) {
+                // Eliminar imagen anterior si existe (solo si es local)
+                if ($encomienda && $encomienda->img_url && str_contains($encomienda->img_url, '/storage/')) {
+                    $oldPath = str_replace('/storage/', '', $encomienda->img_url);
+                    $oldPath = ltrim($oldPath, '/');
+                    if ($oldPath) {
+                        Storage::disk('public')->delete($oldPath);
+                    }
+                }
+
+                // Guardar nueva imagen
+                $file = request()->file('avatar');
+                $filename = 'encomienda-' . $id . '-' . time() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('encomiendas', $filename, 'public');
+                $imgUrl = '/storage/' . $path;
+            } else {
+                // Mantener la imagen actual si no se sube una nueva
+                $imgUrl = $encomienda->img_url ?? null;
+            }
+
             // Actualizar encomienda
             DB::table('encomiendas')
                 ->where('venta_id', $id)
@@ -568,7 +603,7 @@ class EncomiendaController extends Controller
                     'peso' => $validated['peso'],
                     'descripcion' => $validated['descripcion'],
                     'nombre_destinatario' => $validated['nombre_destinatario'],
-                    'img_url' => $validated['img_url'],
+                    'img_url' => $imgUrl,
                     'modalidad_pago' => $validated['modalidad_pago'],
                     'monto_pagado_origen' => $montoPagadoOrigen,
                     'updated_at' => now()
