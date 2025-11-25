@@ -163,6 +163,14 @@ class BoletoController extends Controller
             ])->withInput();
         }
 
+        // Validar que la fecha y hora de salida no hayan pasado
+        $fechaSalida = \Carbon\Carbon::parse($viaje->fecha_salida);
+        if (!$fechaSalida->isFuture()) {
+            return back()->withErrors([
+                'viaje_id' => 'El viaje seleccionado no está disponible porque su fecha y hora de salida ya pasaron. Solo se pueden vender boletos para viajes con fecha y hora futura.'
+            ])->withInput();
+        }
+
         // Verificar asientos disponibles
         $boletosVendidos = DB::table('boletos')
             ->where('viaje_id', $viaje->id)

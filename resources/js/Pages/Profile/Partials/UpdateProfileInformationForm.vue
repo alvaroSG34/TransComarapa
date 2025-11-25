@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -17,13 +17,29 @@ defineProps({
 
 const user = usePage().props.auth.user;
 
+// Construir name desde nombre y apellido si name no está disponible
+const userName = computed(() => {
+    if (user?.name) {
+        return user.name;
+    }
+    if (user?.nombre || user?.apellido) {
+        return `${user.nombre || ''} ${user.apellido || ''}`.trim();
+    }
+    return '';
+});
+
+// Usar correo si email no está disponible
+const userEmail = computed(() => {
+    return user?.email || user?.correo || '';
+});
+
 const form = useForm({
-    name: user.name,
-    email: user.email,
+    name: userName.value,
+    email: userEmail.value,
     avatar: null,
 });
 
-const avatarPreview = ref(user.img_url || null);
+const avatarPreview = ref(user?.img_url || null);
 const fileInput = ref(null);
 
 const handleFileChange = (event) => {
@@ -59,6 +75,27 @@ const removeAvatar = () => {
         fileInput.value.value = '';
     }
 };
+
+const submit = () => {
+    form.transform((data) => {
+        const formData = new FormData();
+        formData.append('name', data.name || '');
+        formData.append('email', data.email || '');
+        if (data.avatar) {
+            formData.append('avatar', data.avatar);
+        }
+        formData.append('_method', 'PATCH');
+        return formData;
+    }).post(route('profile.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Resetear el input de archivo después de éxito
+            if (fileInput.value) {
+                fileInput.value.value = '';
+            }
+        }
+    });
+};
 </script>
 
 <template>
@@ -74,24 +111,7 @@ const removeAvatar = () => {
         </header>
 
         <form
-            @submit.prevent="form.transform((data) => {
-                const formData = new FormData();
-                formData.append('name', data.name || '');
-                formData.append('email', data.email || '');
-                if (data.avatar) {
-                    formData.append('avatar', data.avatar);
-                }
-                formData.append('_method', 'PATCH');
-                return formData;
-            }).post(route('profile.update'), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Resetear el input de archivo después de éxito
-                    if (fileInput.value) {
-                        fileInput.value.value = '';
-                    }
-                }
-            })"
+            @submit.prevent="submit"
             class="mt-6 space-y-6"
         >
             <div>

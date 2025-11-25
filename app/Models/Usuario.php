@@ -47,6 +47,16 @@ class Usuario extends Authenticatable
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'name',
+        'email',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

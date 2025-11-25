@@ -100,11 +100,24 @@ class EncomiendaController extends Controller
         $rutas = $this->rutaRepository->all();
         $clientes = $this->usuarioRepository->findByRol('Cliente');
         
-        // Obtener viajes programados o en curso
+        // Obtener solo viajes disponibles (programados con fecha/hora futura o en curso con fecha de llegada futura)
         $viajes = DB::table('viajes')
             ->join('rutas', 'viajes.ruta_id', '=', 'rutas.id')
             ->join('vehiculos', 'viajes.vehiculo_id', '=', 'vehiculos.id')
-            ->whereIn('viajes.estado', ['programado', 'en_curso'])
+            ->where(function($query) {
+                $query->where(function($q) {
+                    // Viajes programados con fecha y hora futura
+                    $q->where('viajes.estado', 'programado')
+                      ->where('viajes.fecha_salida', '>', now());
+                })->orWhere(function($q) {
+                    // Viajes en curso pero que aún no han llegado (fecha de llegada futura)
+                    $q->where('viajes.estado', 'en_curso')
+                      ->where(function($subQ) {
+                          $subQ->whereNull('viajes.fecha_llegada')
+                               ->orWhere('viajes.fecha_llegada', '>', now());
+                      });
+                });
+            })
             ->select(
                 'viajes.id',
                 'viajes.ruta_id',
@@ -196,13 +209,42 @@ class EncomiendaController extends Controller
             try {
                 Log::info('Iniciando transacción de base de datos');
                 
-                // Obtener el vehiculo_id del viaje
+                // Obtener el vehiculo_id del viaje y validar disponibilidad
                 Log::info('Buscando viaje con ID: ' . $validated['viaje_id']);
                 $viaje = DB::table('viajes')->where('id', $validated['viaje_id'])->first();
                 
                 if (!$viaje) {
                     Log::error('Viaje no encontrado con ID: ' . $validated['viaje_id']);
-                    throw new \Exception('Viaje no encontrado.');
+                    return back()->withErrors([
+                        'viaje_id' => 'El viaje no existe.'
+                    ])->withInput();
+                }
+                
+                // Validar que el viaje esté disponible (fecha y hora no pasadas)
+                $fechaSalida = \Carbon\Carbon::parse($viaje->fecha_salida);
+                $fechaLlegada = $viaje->fecha_llegada ? \Carbon\Carbon::parse($viaje->fecha_llegada) : null;
+                
+                $esDisponible = false;
+                if ($viaje->estado === 'programado') {
+                    // Viaje programado: la fecha y hora de salida deben ser futuras
+                    $esDisponible = $fechaSalida->isFuture();
+                } elseif ($viaje->estado === 'en_curso') {
+                    // Viaje en curso: debe tener fecha de llegada futura o no tener fecha de llegada
+                    $esDisponible = !$fechaLlegada || $fechaLlegada->isFuture();
+                }
+                
+                if (!$esDisponible) {
+                    Log::error('Viaje no disponible (fecha/hora pasada):', [
+                        'id' => $viaje->id,
+                        'estado' => $viaje->estado,
+                        'fecha_salida' => $viaje->fecha_salida,
+                        'fecha_llegada' => $viaje->fecha_llegada,
+                        'fecha_salida_es_futura' => $fechaSalida->isFuture(),
+                        'fecha_llegada_es_futura' => $fechaLlegada ? $fechaLlegada->isFuture() : 'null'
+                    ]);
+                    return back()->withErrors([
+                        'viaje_id' => 'El viaje seleccionado no está disponible porque su fecha y hora ya pasaron. Solo se pueden registrar encomiendas en viajes con fecha y hora futura o en curso que aún no han llegado.'
+                    ])->withInput();
                 }
                 
                 Log::info('Viaje encontrado:', [
@@ -503,11 +545,24 @@ class EncomiendaController extends Controller
         $rutas = $this->rutaRepository->all();
         $clientes = $this->usuarioRepository->findByRol('Cliente');
         
-        // Obtener viajes programados o en curso
+        // Obtener solo viajes disponibles (programados con fecha/hora futura o en curso con fecha de llegada futura)
         $viajes = DB::table('viajes')
             ->join('rutas', 'viajes.ruta_id', '=', 'rutas.id')
             ->join('vehiculos', 'viajes.vehiculo_id', '=', 'vehiculos.id')
-            ->whereIn('viajes.estado', ['programado', 'en_curso'])
+            ->where(function($query) {
+                $query->where(function($q) {
+                    // Viajes programados con fecha y hora futura
+                    $q->where('viajes.estado', 'programado')
+                      ->where('viajes.fecha_salida', '>', now());
+                })->orWhere(function($q) {
+                    // Viajes en curso pero que aún no han llegado (fecha de llegada futura)
+                    $q->where('viajes.estado', 'en_curso')
+                      ->where(function($subQ) {
+                          $subQ->whereNull('viajes.fecha_llegada')
+                               ->orWhere('viajes.fecha_llegada', '>', now());
+                      });
+                });
+            })
             ->select(
                 'viajes.id',
                 'viajes.ruta_id',

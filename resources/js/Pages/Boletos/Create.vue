@@ -103,6 +103,34 @@ const cerrarModal = () => {
     router.visit(route('boletos.index'));
 };
 
+const descargarQr = () => {
+    if (!qrData.value?.qr_base64) return;
+    
+    try {
+        // Convertir base64 a blob
+        const byteCharacters = atob(qrData.value.qr_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        
+        // Crear enlace de descarga
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `qr-pago-${qrData.value.transaction_id || Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error al descargar QR:', error);
+        alert('Error al descargar el código QR');
+    }
+};
+
 // Verificar si hay datos de QR en las props al cargar
 onMounted(() => {
     // Si hay datos de QR en las props, mostrar modal
@@ -432,6 +460,16 @@ const asientosDisponiblesArray = computed(() => {
                             ID de Transacción: {{ qrData.transaction_id || 'N/A' }}
                         </p>
                         <div class="flex gap-2 justify-center">
+                            <button
+                                @click="descargarQr"
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
+                                style="background-color: var(--accent-600); color: white"
+                            >
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Descargar QR
+                            </button>
                             <button
                                 @click="cerrarModal"
                                 class="px-4 py-2 rounded-md text-sm font-medium"

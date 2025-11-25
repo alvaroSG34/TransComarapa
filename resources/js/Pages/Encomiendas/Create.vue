@@ -171,6 +171,34 @@ const cerrarModal = () => {
     router.visit(route('encomiendas.index'));
 };
 
+const descargarQr = () => {
+    if (!qrData.value?.qr_base64) return;
+    
+    try {
+        // Convertir base64 a blob
+        const byteCharacters = atob(qrData.value.qr_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        
+        // Crear enlace de descarga
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `qr-pago-${qrData.value.transaction_id || Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error al descargar QR:', error);
+        alert('Error al descargar el código QR');
+    }
+};
+
 // Verificar si hay datos de QR en las props al cargar
 onMounted(() => {
     // Si hay datos de QR en las props, mostrar modal
@@ -234,18 +262,21 @@ onMounted(() => {
                                     style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
                                     :class="{ 'border-red-500': form.errors.viaje_id }"
                                 >
-                                    <option value="">Seleccione un viaje</option>
+                                    <option value="">Seleccione un viaje disponible</option>
                                     <option v-for="viaje in viajesDisponibles" :key="viaje.id" :value="viaje.id">
                                         {{ new Date(viaje.fecha_salida).toLocaleString('es-BO') }} - 
                                         {{ viaje.marca }} {{ viaje.modelo }} ({{ viaje.placa }}) - 
-                                        Estado: {{ viaje.estado }}
+                                        Estado: {{ viaje.estado === 'programado' ? 'Programado' : 'En Curso' }}
                                     </option>
                                 </select>
                                 <p v-if="form.errors.viaje_id" class="mt-1 text-sm text-red-600">
                                     {{ form.errors.viaje_id }}
                                 </p>
                                 <p v-else-if="viajesDisponibles.length === 0" class="mt-1 text-sm text-yellow-600">
-                                    No hay viajes disponibles para esta ruta
+                                    No hay viajes disponibles para esta ruta. Solo se muestran viajes programados con fecha futura o en curso.
+                                </p>
+                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Seleccione un viaje disponible. Solo se muestran viajes programados con fecha futura o en curso.
                                 </p>
                             </div>
 
@@ -647,6 +678,16 @@ onMounted(() => {
                             Monto: Bs {{ parseFloat(qrData.monto_total).toFixed(2) }}
                         </p>
                         <div class="flex gap-2 justify-center">
+                            <button
+                                @click="descargarQr"
+                                class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
+                                style="background-color: var(--accent-600); color: white"
+                            >
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Descargar QR
+                            </button>
                             <button
                                 @click="cerrarModal"
                                 class="px-4 py-2 rounded-md text-sm font-medium"

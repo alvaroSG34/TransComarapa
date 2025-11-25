@@ -87,17 +87,18 @@ Route::middleware('auth')->group(function () {
 
     // Rutas para Cliente
     Route::middleware(['can:isCliente'])->prefix('cliente')->name('cliente.')->group(function () {
-        Route::get('/boletos/comprar', function () {
-            return Inertia::render('Cliente/ComprarBoleto');
-        })->name('boletos.comprar');
+        // Boletos
+        Route::get('/boletos/comprar', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarRutas'])->name('boletos.comprar');
+        Route::get('/boletos/ruta/{rutaId}/viajes', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarViajes'])->name('boletos.viajes');
+        Route::get('/boletos/viaje/{viajeId}/ruta/{rutaId}/form', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarFormularioCompra'])->name('boletos.form');
+        Route::get('/boletos/viaje/{viajeId}/asientos-ocupados', [\App\Http\Controllers\ClienteBoletoController::class, 'obtenerAsientosOcupados'])->name('boletos.asientos-ocupados');
+        Route::post('/boletos/procesar-compra', [\App\Http\Controllers\ClienteBoletoController::class, 'procesarCompra'])->name('boletos.procesar-compra');
         
         Route::get('/encomiendas/enviar', function () {
             return Inertia::render('Cliente/EnviarEncomienda');
         })->name('encomiendas.enviar');
         
-        Route::get('/historial', function () {
-            return Inertia::render('Cliente/Historial');
-        })->name('historial');
+        Route::get('/historial', [\App\Http\Controllers\ClienteHistorialController::class, 'index'])->name('historial');
     });
 });
 
