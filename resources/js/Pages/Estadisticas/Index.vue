@@ -252,6 +252,18 @@ const crearGraficos = () => {
     });
 };
 
+const handleButtonHover = (event) => {
+    event.target.style.backgroundColor = 'var(--primary-500)';
+    event.target.style.color = 'white';
+    event.target.style.borderColor = 'var(--primary-500)';
+};
+
+const handleButtonLeave = (event) => {
+    event.target.style.backgroundColor = 'var(--card-bg)';
+    event.target.style.color = 'var(--text-primary)';
+    event.target.style.borderColor = 'var(--border-color)';
+};
+
 onMounted(() => {
     crearGraficos();
 });
@@ -271,22 +283,28 @@ onMounted(() => {
                     <div class="flex gap-2">
                         <button
                             @click="setFiltroRapido('hoy')"
-                            class="px-3 py-1.5 text-sm rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
-                            style="color: var(--text-secondary)"
+                            class="px-3 py-1.5 text-sm rounded-md transition-all duration-200 hover:scale-105"
+                            style="background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);"
+                            @mouseenter="handleButtonHover"
+                            @mouseleave="handleButtonLeave"
                         >
                             Hoy
                         </button>
                         <button
                             @click="setFiltroRapido('semana')"
-                            class="px-3 py-1.5 text-sm rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
-                            style="color: var(--text-secondary)"
+                            class="px-3 py-1.5 text-sm rounded-md transition-all duration-200 hover:scale-105"
+                            style="background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);"
+                            @mouseenter="handleButtonHover"
+                            @mouseleave="handleButtonLeave"
                         >
                             Esta Semana
                         </button>
                         <button
                             @click="setFiltroRapido('mes')"
-                            class="px-3 py-1.5 text-sm rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
-                            style="color: var(--text-secondary)"
+                            class="px-3 py-1.5 text-sm rounded-md transition-all duration-200 hover:scale-105"
+                            style="background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);"
+                            @mouseenter="handleButtonHover"
+                            @mouseleave="handleButtonLeave"
                         >
                             Este Mes
                         </button>
@@ -294,7 +312,8 @@ onMounted(() => {
                     
                     <button
                         @click="imprimirReporte"
-                        class="px-4 py-2 rounded-md text-white font-medium bg-gray-700 hover:bg-gray-800 flex items-center gap-2 transition-colors"
+                        class="px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-200 hover:scale-105"
+                        style="background-color: var(--button-primary-bg); color: var(--button-primary-text);"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -384,7 +403,7 @@ onMounted(() => {
                                             <span class="text-sm font-semibold" style="color: var(--text-primary)">{{ formatearMoneda(ruta.total_ingresos) }}</span>
                                         </div>
                                         <!-- Barra de progreso -->
-                                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="w-full rounded-full h-1.5" style="background-color: var(--card-bg);">
                                             <div 
                                                 class="h-1.5 rounded-full transition-all" 
                                                 :style="{ 
@@ -396,7 +415,7 @@ onMounted(() => {
                                     </div>
                                 </div>
                                 
-                                <div v-else class="text-center py-8 text-gray-400">
+                                <div v-else class="text-center py-8" style="color: var(--text-secondary);">
                                     <div class="text-4xl mb-2">🛣️</div>
                                     <p class="text-sm">Sin datos</p>
                                 </div>
@@ -427,7 +446,7 @@ onMounted(() => {
                                             <span class="text-sm font-semibold" style="color: var(--text-primary)">{{ vehiculo.total_viajes }} viajes</span>
                                         </div>
                                         <!-- Barra de progreso -->
-                                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="w-full rounded-full h-1.5" style="background-color: var(--card-bg);">
                                             <div 
                                                 class="h-1.5 rounded-full transition-all" 
                                                 :style="{ 
@@ -439,7 +458,7 @@ onMounted(() => {
                                     </div>
                                 </div>
                                 
-                                <div v-else class="text-center py-8 text-gray-400">
+                                <div v-else class="text-center py-8" style="color: var(--text-secondary);">
                                     <div class="text-4xl mb-2">🚌</div>
                                     <p class="text-sm">Sin datos</p>
                                 </div>
@@ -523,10 +542,7 @@ onMounted(() => {
     opacity: 0;
 }
 
-/* Mejoras en barras de progreso */
-.bg-gray-100 {
-    background-color: #f3f4f6;
-}
+/* Mejoras en barras de progreso - ahora usa variables del tema */
 
 @media print {
     .print\:hidden {

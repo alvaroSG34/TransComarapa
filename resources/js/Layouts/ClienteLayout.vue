@@ -5,6 +5,7 @@ import { useTheme } from '@/composables/useTheme';
 import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import VisitaCounter from '@/Components/VisitaCounter.vue';
 
 const showingMobileMenu = ref(false);
 const showingUserDropdown = ref(false);
@@ -165,9 +166,12 @@ onMounted(() => {
                             TransComarapa
                         </span>
                     </div>
-                    <p class="text-sm" style="color: var(--text-secondary);">
-                        © {{ new Date().getFullYear() }} TransComarapa. Todos los derechos reservados.
-                    </p>
+                    <div class="flex flex-col md:flex-row items-center gap-4">
+                        <VisitaCounter :mostrar-ruta="true" />
+                        <p class="text-sm" style="color: var(--text-secondary);">
+                            © {{ new Date().getFullYear() }} TransComarapa. Todos los derechos reservados.
+                        </p>
+                    </div>
                 </div>
             </div>
         </footer>

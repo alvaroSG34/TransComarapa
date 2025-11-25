@@ -6,12 +6,33 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
+import VisitaCounter from '@/Components/VisitaCounter.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useTheme } from '@/composables/useTheme';
 
 const showingNavigationDropdown = ref(false);
-const { initializeTheme } = useTheme();
+const { initializeTheme, themeClasses } = useTheme();
 const page = usePage();
+
+const handleHamburgerMouseEnter = (event) => {
+    event.target.style.backgroundColor = 'var(--card-bg)';
+    event.target.style.color = 'var(--text-primary)';
+};
+
+const handleHamburgerMouseLeave = (event) => {
+    event.target.style.backgroundColor = 'transparent';
+    event.target.style.color = 'var(--text-secondary)';
+};
+
+const handleHamburgerFocus = (event) => {
+    event.target.style.backgroundColor = 'var(--card-bg)';
+    event.target.style.color = 'var(--text-primary)';
+};
+
+const handleHamburgerBlur = (event) => {
+    event.target.style.backgroundColor = 'transparent';
+    event.target.style.color = 'var(--text-secondary)';
+};
 
 // Obtener el rol del usuario actual
 const userRole = computed(() => page.props.auth?.user?.rol || 'Cliente');
@@ -53,20 +74,22 @@ onMounted(() => {
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100">
+    <div :class="themeClasses" style="background-color: var(--bg-primary); min-height: 100vh;">
+        <div class="min-h-screen transition-all duration-300" style="background-color: var(--bg-primary);">
             <nav
-                class="border-b border-gray-100 bg-white"
+                class="border-b transition-all duration-300"
+                style="border-color: var(--border-color); background-color: var(--bg-secondary);"
             >
                 <!-- Primary Navigation Menu -->
                 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div class="flex h-16 justify-between">
-                        <div class="flex">
+                        <div class="flex items-center">
                             <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')" class="flex items-center">
+                            <div class="hidden sm:flex shrink-0 items-center">
+                                <Link :href="route('dashboard')" class="block">
                                     <ApplicationLogo
-                                        class="block h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 fill-current text-gray-800 transition-all duration-200 hover:opacity-80"
+                                        class="block h-5 w-5 md:h-6 md:w-6 fill-current transition-all duration-200 hover:opacity-80"
+                                        style="color: var(--text-primary);"
                                     />
                                 </Link>
                             </div>
@@ -97,7 +120,8 @@ onMounted(() => {
                                         <span class="inline-flex rounded-md">
                                             <button
                                                 type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
+                                                class="inline-flex items-center rounded-md border border-transparent px-3 py-2 text-sm font-medium leading-4 transition-all duration-150 ease-in-out focus:outline-none hover:opacity-80"
+                                                style="background-color: var(--bg-secondary); color: var(--text-secondary);"
                                             >
                                                 {{ $page.props.auth.user.name }}
 
@@ -142,7 +166,12 @@ onMounted(() => {
                                     showingNavigationDropdown =
                                         !showingNavigationDropdown
                                 "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
+                                class="inline-flex items-center justify-center rounded-md p-2 transition-all duration-150 ease-in-out focus:outline-none hover:opacity-80"
+                                style="color: var(--text-secondary); background-color: transparent;"
+                                @mouseenter="handleHamburgerMouseEnter"
+                                @mouseleave="handleHamburgerMouseLeave"
+                                @focus="handleHamburgerFocus"
+                                @blur="handleHamburgerBlur"
                             >
                                 <svg
                                     class="h-6 w-6"
@@ -197,15 +226,17 @@ onMounted(() => {
 
                     <!-- Responsive Settings Options -->
                     <div
-                        class="border-t border-gray-200 pb-1 pt-4"
+                        class="border-t pb-1 pt-4 transition-all duration-300"
+                        style="border-color: var(--border-color);"
                     >
                         <div class="px-4">
                             <div
-                                class="text-base font-medium text-gray-800"
+                                class="text-base font-medium"
+                                style="color: var(--text-primary);"
                             >
                                 {{ $page.props.auth.user.name }}
                             </div>
-                            <div class="text-sm font-medium text-gray-500">
+                            <div class="text-sm font-medium" style="color: var(--text-secondary);">
                                 {{ $page.props.auth.user.email }}
                             </div>
                         </div>
@@ -233,7 +264,8 @@ onMounted(() => {
 
             <!-- Page Heading -->
             <header
-                class="bg-white shadow"
+                class="shadow transition-all duration-300"
+                style="background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color);"
                 v-if="$slots.header"
             >
                 <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -245,6 +277,28 @@ onMounted(() => {
             <main>
                 <slot />
             </main>
+
+            <!-- Footer -->
+            <footer
+                class="mt-auto border-t transition-all duration-300"
+                style="background-color: var(--bg-secondary); border-color: var(--border-color);"
+            >
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <span class="font-bold text-lg" style="color: var(--text-primary);">
+                                TransComarapa
+                            </span>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center gap-4">
+                            <VisitaCounter :mostrar-ruta="true" />
+                            <p class="text-sm" style="color: var(--text-secondary);">
+                                © {{ new Date().getFullYear() }} TransComarapa. Todos los derechos reservados.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     </div>
 </template>

@@ -2,6 +2,7 @@
 import { onMounted } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
+import VisitaCounter from '@/Components/VisitaCounter.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useTheme } from '@/composables/useTheme';
 
@@ -51,5 +52,15 @@ onMounted(() => {
         <div
             class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-20"
         ></div>
+
+        <!-- Footer con contador de visitas -->
+        <footer class="relative z-10 mt-8 pb-4">
+            <div class="flex flex-col items-center gap-2">
+                <VisitaCounter :mostrar-ruta="false" :mostrar-total="true" />
+                <p class="text-xs" style="color: var(--text-secondary);">
+                    © {{ new Date().getFullYear() }} TransComarapa. Todos los derechos reservados.
+                </p>
+            </div>
+        </footer>
     </div>
 </template>

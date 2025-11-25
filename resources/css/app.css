@@ -30,6 +30,12 @@
     /* Accent - verde */
     --accent-600: #16a34a;
     --accent-500: #22c55e;
+
+    /* Botones */
+    --button-primary-bg: #0f766e;
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #ea580c;
+    --button-secondary-text: #ffffff;
 }
 
 /* ==========================================================
@@ -53,6 +59,12 @@
 
     --accent-600: #22c55e;
     --accent-500: #4ade80;
+
+    /* Botones - en modo oscuro, usar colores más claros con texto oscuro o colores vibrantes con texto blanco */
+    --button-primary-bg: #22d3ee;
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #fb923c;
+    --button-secondary-text: #ffffff;
 }
 
 /* ==========================================================
@@ -64,6 +76,10 @@
     --primary-600: #2563eb;
     --secondary-600: #f97316;
     --accent-600: #10b981;
+    --button-primary-bg: #2563eb;
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #f97316;
+    --button-secondary-text: #ffffff;
 }
 
 /* Tema Jóvenes — colores teal/naranja modernos */
@@ -71,6 +87,10 @@
     --primary-600: #0f766e;
     --secondary-600: #ea580c;
     --accent-600: #16a34a;
+    --button-primary-bg: #0f766e;
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #ea580c;
+    --button-secondary-text: #ffffff;
 }
 
 /* Tema Adultos — colores elegantes */
@@ -78,6 +98,10 @@
     --primary-600: #334155;
     --secondary-600: #475569;
     --accent-600: #0ea5e9;
+    --button-primary-bg: #334155;
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #475569;
+    --button-secondary-text: #ffffff;
 }
 
 /* Glow opcional */

@@ -68,81 +68,133 @@ const isCliente = computed(() => userRole.value === 'Cliente');
     <!-- Layout para Admin y Secretaria -->
     <AuthenticatedLayout v-else>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            <h2 class="font-semibold text-xl leading-tight" style="color: var(--text-primary)">
                 Dashboard
             </h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
-                        <h1 class="text-3xl font-bold mb-4">
+        <div class="py-8" style="background-color: var(--bg-primary); min-height: calc(100vh - 4rem);">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+                <!-- Banner de Bienvenida con Tema -->
+                <div class="relative overflow-hidden rounded-2xl p-8 transition-all duration-300"
+                     style="background: linear-gradient(135deg, var(--primary-600), var(--accent-600));">
+                    <div class="absolute inset-0 opacity-10">
+                        <div class="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" 
+                             style="background-color: var(--accent-500); transform: translate(30%, -30%);"></div>
+                        <div class="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl" 
+                             style="background-color: var(--primary-500); transform: translate(-30%, 30%);"></div>
+                    </div>
+                    <div class="relative z-10">
+                        <h1 class="text-4xl font-bold mb-2 text-white">
                             ¡Bienvenido, {{ userName }}! 👋
                         </h1>
-                        <p class="text-lg text-gray-600 mb-6">
+                        <p class="text-lg text-white opacity-90">
                             Panel de administración de TransComarapa
                         </p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                            <Link 
-                                :href="route('rutas.index')" 
-                                class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-lg transition-colors"
-                            >
-                                <div class="text-2xl mb-2">🛣️</div>
-                                <div class="font-bold text-lg">Rutas</div>
-                                <div class="text-sm opacity-90">Gestionar rutas</div>
-                            </Link>
-                            
-                            <Link 
-                                :href="route('viajes.index')" 
-                                class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-lg transition-colors"
-                            >
-                                <div class="text-2xl mb-2">🚌</div>
-                                <div class="font-bold text-lg">Viajes</div>
-                                <div class="text-sm opacity-90">Gestionar viajes</div>
-                            </Link>
-                            
-                            <Link 
-                                :href="route('ventas.index')" 
-                                class="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-lg transition-colors"
-                            >
-                                <div class="text-2xl mb-2">💰</div>
-                                <div class="font-bold text-lg">Ventas</div>
-                                <div class="text-sm opacity-90">Ver ventas</div>
-                            </Link>
-                            
-                            <Link 
-                                :href="route('clientes.index')" 
-                                class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-lg transition-colors"
-                            >
-                                <div class="text-2xl mb-2">👥</div>
-                                <div class="font-bold text-lg">Clientes</div>
-                                <div class="text-sm opacity-90">Gestionar clientes</div>
-                            </Link>
-                            
-                            <Link 
-                                v-if="userRole === 'Admin'"
-                                :href="route('vehiculos.index')" 
-                                class="bg-red-500 hover:bg-red-600 text-white p-6 rounded-lg transition-colors"
-                            >
-                                <div class="text-2xl mb-2">🚗</div>
-                                <div class="font-bold text-lg">Vehículos</div>
-                                <div class="text-sm opacity-90">Gestionar vehículos</div>
-                            </Link>
-                            
-                            <Link 
-                                v-if="userRole === 'Admin'"
-                                :href="route('estadisticas.index')" 
-                                class="bg-indigo-500 hover:bg-indigo-600 text-white p-6 rounded-lg transition-colors"
-                            >
-                                <div class="text-2xl mb-2">📊</div>
-                                <div class="font-bold text-lg">Estadísticas</div>
-                                <div class="text-sm opacity-90">Ver estadísticas</div>
-                            </Link>
+                        <div class="mt-4 flex items-center gap-2">
+                            <div class="px-4 py-2 rounded-full text-sm font-medium text-white"
+                                 style="background-color: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px);">
+                                {{ userRole }}
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Tarjetas de Acción Rápida -->
+                <div>
+                    <h2 class="text-2xl font-bold mb-6" style="color: var(--text-primary)">
+                        Acciones Rápidas
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <Link 
+                            :href="route('rutas.index')" 
+                            class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
+                            style="background: linear-gradient(135deg, var(--primary-600), var(--primary-500)); border: 2px solid transparent;"
+                        >
+                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
+                                 style="background-color: white; transform: translate(30%, -30%);"></div>
+                            <div class="relative z-10">
+                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">🛣️</div>
+                                <div class="font-bold text-xl mb-2">Rutas</div>
+                                <div class="text-sm opacity-90">Gestionar rutas del sistema</div>
+                            </div>
+                        </Link>
+                        
+                        <Link 
+                            :href="route('viajes.index')" 
+                            class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
+                            style="background: linear-gradient(135deg, var(--accent-600), var(--accent-500)); border: 2px solid transparent;"
+                        >
+                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
+                                 style="background-color: white; transform: translate(30%, -30%);"></div>
+                            <div class="relative z-10">
+                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">🚌</div>
+                                <div class="font-bold text-xl mb-2">Viajes</div>
+                                <div class="text-sm opacity-90">Gestionar viajes programados</div>
+                            </div>
+                        </Link>
+                        
+                        <Link 
+                            :href="route('ventas.index')" 
+                            class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
+                            style="background: linear-gradient(135deg, var(--secondary-600), var(--secondary-500)); border: 2px solid transparent;"
+                        >
+                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
+                                 style="background-color: white; transform: translate(30%, -30%);"></div>
+                            <div class="relative z-10">
+                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">💰</div>
+                                <div class="font-bold text-xl mb-2">Ventas</div>
+                                <div class="text-sm opacity-90">Ver historial de ventas</div>
+                            </div>
+                        </Link>
+                        
+                        <Link 
+                            :href="route('clientes.index')" 
+                            class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
+                            style="background: linear-gradient(135deg, var(--primary-500), var(--primary-600)); border: 2px solid transparent;"
+                        >
+                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
+                                 style="background-color: white; transform: translate(30%, -30%);"></div>
+                            <div class="relative z-10">
+                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">👥</div>
+                                <div class="font-bold text-xl mb-2">Clientes</div>
+                                <div class="text-sm opacity-90">Gestionar clientes</div>
+                            </div>
+                        </Link>
+                        
+                        <Link 
+                            v-if="userRole === 'Admin'"
+                            :href="route('vehiculos.index')" 
+                            class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
+                            style="background: linear-gradient(135deg, var(--accent-500), var(--accent-600)); border: 2px solid transparent;"
+                        >
+                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
+                                 style="background-color: white; transform: translate(30%, -30%);"></div>
+                            <div class="relative z-10">
+                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">🚗</div>
+                                <div class="font-bold text-xl mb-2">Vehículos</div>
+                                <div class="text-sm opacity-90">Gestionar vehículos</div>
+                            </div>
+                        </Link>
+                        
+                        <Link 
+                            v-if="userRole === 'Admin'"
+                            :href="route('estadisticas.index')" 
+                            class="group relative overflow-hidden rounded-xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
+                            style="background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); color: white; border: 2px solid transparent;"
+                        >
+                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
+                                 style="background-color: white; transform: translate(30%, -30%);"></div>
+                            <div class="relative z-10">
+                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">📊</div>
+                                <div class="font-bold text-xl mb-2">Estadísticas</div>
+                                <div class="text-sm opacity-90">Ver estadísticas del sistema</div>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+
+                
             </div>
         </div>
     </AuthenticatedLayout>

@@ -12,15 +12,65 @@ const props = defineProps({
     },
 });
 
-const classes = computed(() =>
-    props.active
-        ? 'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base font-medium text-indigo-700 bg-indigo-50 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out'
-        : 'block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:text-gray-800 focus:bg-gray-50 focus:border-gray-300 transition duration-150 ease-in-out',
+const baseClasses = computed(() => 
+    'block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium focus:outline-none transition duration-150 ease-in-out'
 );
+
+const activeStyle = computed(() => ({
+    borderColor: 'var(--primary-500)',
+    color: 'var(--primary-600)',
+    backgroundColor: 'var(--card-bg)',
+}));
+
+const inactiveStyle = computed(() => ({
+    borderColor: 'transparent',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'transparent',
+}));
+
+const handleMouseEnter = (event) => {
+    if (!props.active) {
+        event.target.style.color = 'var(--text-primary)';
+        event.target.style.backgroundColor = 'var(--card-bg)';
+        event.target.style.borderColor = 'var(--border-color)';
+    }
+};
+
+const handleMouseLeave = (event) => {
+    if (!props.active) {
+        event.target.style.color = 'var(--text-secondary)';
+        event.target.style.backgroundColor = 'transparent';
+        event.target.style.borderColor = 'transparent';
+    }
+};
+
+const handleFocus = (event) => {
+    if (!props.active) {
+        event.target.style.color = 'var(--text-primary)';
+        event.target.style.backgroundColor = 'var(--card-bg)';
+        event.target.style.borderColor = 'var(--border-color)';
+    }
+};
+
+const handleBlur = (event) => {
+    if (!props.active) {
+        event.target.style.color = 'var(--text-secondary)';
+        event.target.style.backgroundColor = 'transparent';
+        event.target.style.borderColor = 'transparent';
+    }
+};
 </script>
 
 <template>
-    <Link :href="href" :class="classes">
+    <Link 
+        :href="href" 
+        :class="baseClasses"
+        :style="props.active ? activeStyle : inactiveStyle"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+        @focus="handleFocus"
+        @blur="handleBlur"
+    >
         <slot />
     </Link>
 </template>

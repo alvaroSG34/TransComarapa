@@ -102,4 +102,9 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+// Rutas para contador de visitas (públicas)
+Route::get('/api/visitas/contador', [\App\Http\Controllers\VisitaController::class, 'obtenerContadorPorRuta'])->name('visitas.contador');
+Route::get('/api/visitas/total', [\App\Http\Controllers\VisitaController::class, 'obtenerContadorTotal'])->name('visitas.total');
+Route::post('/api/visitas/multiples', [\App\Http\Controllers\VisitaController::class, 'obtenerContadoresMultiples'])->name('visitas.multiples');
+
 require __DIR__.'/auth.php';
