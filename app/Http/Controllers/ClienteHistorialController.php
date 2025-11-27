@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PagoVenta;
+use App\Services\PagoFacilService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -146,6 +148,94 @@ class ClienteHistorialController extends Controller
             'compras' => $comprasAgrupadas,
             'filtros' => $request->only(['tipo', 'estado_pago', 'fecha_desde', 'fecha_hasta'])
         ]);
+    }
+
+    /**
+     * Verificar estado del pago QR de un boleto (solo del cliente autenticado)
+     */
+    public function verificarEstadoPago(string $id, PagoFacilService $pagoFacilService)
+    {
+        try {
+            $cliente = auth()->user();
+
+            // Verificar que el boleto existe y pertenece al cliente
+            $boleto = DB::table('boletos')
+                ->join('ventas', 'boletos.venta_id', '=', 'ventas.id')
+                ->where('boletos.id', $id)
+                ->where('ventas.usuario_id', $cliente->id)
+                ->select('boletos.*', 'ventas.usuario_id')
+                ->first();
+            
+            if (!$boleto) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Boleto no encontrado o no autorizado.'
+                ], 404);
+            }
+
+            // Buscar el PagoVenta asociado
+            $pagoVenta = PagoVenta::where('venta_id', $boleto->venta_id)
+                ->where('metodo_pago', 'QR')
+                ->first();
+
+            if (!$pagoVenta) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se encontró pago QR para este boleto.'
+                ], 404);
+            }
+
+            // Consultar estado en PagoFácil
+            $resultado = $pagoFacilService->consultarEstadoPago($pagoVenta);
+
+            if (!$resultado['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $resultado['error'] ?? 'Error al consultar estado'
+                ], 500);
+            }
+
+            // Verificar si el pago fue completado
+            // paymentStatus: 1 o 5 = Pagado exitosamente
+            $estadoPagoFacil = $resultado['data']['values']['paymentStatus'] ?? null;
+            
+            // Si el estado es 1 o 5 (pagado), actualizar en BD
+            if ($estadoPagoFacil == 1 || $estadoPagoFacil == 5) {
+                DB::table('pago_ventas')
+                    ->where('id', $pagoVenta->id)
+                    ->update([
+                        'estado_pago' => 'Pagado',
+                        'fecha_pago' => now(),
+                        'updated_at' => now()
+                    ]);
+
+                DB::table('ventas')
+                    ->where('id', $boleto->venta_id)
+                    ->update([
+                        'estado_pago' => 'Pagado',
+                        'updated_at' => now()
+                    ]);
+
+                return response()->json([
+                    'success' => true,
+                    'pagado' => true,
+                    'message' => 'El pago ha sido confirmado exitosamente.'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'pagado' => false,
+                'message' => 'El pago aún está pendiente.',
+                'estado' => $estadoPagoFacil
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al verificar estado: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
 

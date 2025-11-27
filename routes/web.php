@@ -99,6 +99,9 @@ Route::middleware('auth')->group(function () {
         })->name('encomiendas.enviar');
         
         Route::get('/historial', [\App\Http\Controllers\ClienteHistorialController::class, 'index'])->name('historial');
+        
+        // Verificar estado de pago de mis boletos
+        Route::post('/boletos/{id}/verificar-estado', [\App\Http\Controllers\ClienteHistorialController::class, 'verificarEstadoPago'])->name('boletos.verificar-estado');
     });
 });
 

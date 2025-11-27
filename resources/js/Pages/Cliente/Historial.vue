@@ -17,6 +17,7 @@ const fechaHasta = ref(props.filtros?.fecha_hasta || '');
 const mostrarModalQr = ref(false);
 const qrData = ref(null);
 const reintentando = ref(false);
+const verificandoPago = ref({});
 
 const aplicarFiltros = () => {
     router.get(route('cliente.historial'), {
@@ -129,6 +130,39 @@ const obtenerColorEstado = (estado) => {
 const comprasFiltradas = computed(() => {
     return props.compras || [];
 });
+
+const verificarEstadoPago = async (compra) => {
+    // Solo para boletos con pago QR pendiente
+    if (compra.tipo !== 'Boleto' || !compra.boletos || compra.boletos.length === 0) {
+        return;
+    }
+
+    const primerBoleto = compra.boletos[0];
+    verificandoPago.value[compra.id] = true;
+
+    try {
+        const response = await axios.post(route('cliente.boletos.verificar-estado', primerBoleto.id));
+
+        if (response.data.success) {
+            if (response.data.pagado) {
+                // El pago fue confirmado
+                alert('✅ ¡Pago confirmado exitosamente!');
+                // Recargar la página para actualizar el estado
+                router.reload({ only: ['compras'] });
+            } else {
+                // El pago aún está pendiente
+                alert('⏳ El pago aún está pendiente. Por favor, intenta nuevamente en unos minutos.');
+            }
+        } else {
+            alert('❌ Error al verificar el estado: ' + (response.data.error || 'Error desconocido'));
+        }
+    } catch (error) {
+        console.error('Error al verificar estado:', error);
+        alert('❌ Error al verificar el estado del pago. Por favor, intenta nuevamente.');
+    } finally {
+        verificandoPago.value[compra.id] = false;
+    }
+};
 </script>
 
 <template>
@@ -335,7 +369,7 @@ const comprasFiltradas = computed(() => {
 
                     <!-- Información de Pago -->
                     <div v-if="compra.pago" class="mt-4 pt-4 border-t" style="border-color: var(--border-color)">
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                             <div>
                                 <span class="text-sm" style="color: var(--text-secondary)">
                                     Método de Pago:
@@ -344,13 +378,26 @@ const comprasFiltradas = computed(() => {
                                     {{ compra.pago.metodo_pago || 'N/A' }}
                                 </span>
                             </div>
-                            <div v-if="compra.pago.qr_base64 && compra.estado_pago === 'Pendiente'">
+                            <div class="flex gap-2">
+                                <!-- Botón Ver QR -->
                                 <button
+                                    v-if="compra.pago.qr_base64 && compra.estado_pago === 'Pendiente'"
                                     @click="mostrarQr(compra)"
                                     class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-200 hover:scale-105"
                                     style="background: linear-gradient(135deg, var(--primary-600), var(--primary-500));"
                                 >
-                                    Ver Código QR
+                                    📱 Ver Código QR
+                                </button>
+                                <!-- Botón Verificar Estado (Solo para boletos con QR pendiente) -->
+                                <button
+                                    v-if="compra.tipo === 'Boleto' && compra.pago.metodo_pago === 'QR' && compra.estado_pago === 'Pendiente'"
+                                    @click="verificarEstadoPago(compra)"
+                                    :disabled="verificandoPago[compra.id]"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style="background: linear-gradient(135deg, #10b981, #059669);"
+                                >
+                                    <span v-if="!verificandoPago[compra.id]">🔄 Verificar Estado</span>
+                                    <span v-else>⏳ Verificando...</span>
                                 </button>
                             </div>
                         </div>
