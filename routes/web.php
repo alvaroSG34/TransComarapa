@@ -64,28 +64,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/ventas/{id}/cancelar', [\App\Http\Controllers\VentaController::class, 'cancelar'])->name('ventas.cancelar');
     });
 
-    // Ruta de DEBUG temporal para verificar URLs de imágenes
-    Route::get('/debug/conductores-imagenes', function () {
-        $conductores = \App\Models\Usuario::where('rol', 'Conductor')->get();
-        $debug = [];
-        
-        foreach ($conductores as $conductor) {
-            $debug[] = [
-                'id' => $conductor->id,
-                'nombre_completo' => $conductor->nombre . ' ' . $conductor->apellido,
-                'img_url_bd' => $conductor->img_url,
-                'img_url_full_generada' => $conductor->img_url_full,
-                'asset_url' => asset('storage/' . ($conductor->img_url ? ltrim(str_replace('/storage/', '', $conductor->img_url), '/') : '')),
-            ];
-        }
-        
-        return response()->json([
-            'conductores' => $debug,
-            'base_url' => url('/'),
-            'asset_url_storage' => asset('storage/'),
-        ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    })->name('debug.conductores');
-
     // Rutas solo para Admin
     Route::middleware(['can:isAdmin'])->group(function () {
         // Clientes - Gestión completa (Ver, Banear)

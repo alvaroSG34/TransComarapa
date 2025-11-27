@@ -1,22 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { onMounted } from 'vue';
 
 const props = defineProps({
     conductores: Array
-});
-
-// Log de las rutas de imágenes para debugging
-onMounted(() => {
-    console.log('=== RUTAS DE IMÁGENES DE CONDUCTORES ===');
-    props.conductores.forEach((conductor, index) => {
-        console.log(`Conductor ${index + 1}: ${conductor.nombre} ${conductor.apellido}`);
-        console.log(`  - img_url (BD): ${conductor.img_url || 'null'}`);
-        console.log(`  - img_url_full (generada): ${conductor.img_url_full || 'null'}`);
-        console.log('---');
-    });
-    console.log('========================================');
 });
 
 const eliminarConductor = (id, nombre, apellido) => {
@@ -49,18 +36,6 @@ const eliminarConductor = (id, nombre, apellido) => {
 
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <!-- DEBUG: Info de URLs de imágenes -->
-                <div class="mb-4 p-4 rounded-lg" style="background-color: #1e293b; color: #e2e8f0; font-family: monospace; font-size: 12px;">
-                    <div class="font-bold mb-2">🔍 DEBUG - Rutas de Imágenes:</div>
-                    <div v-for="(conductor, index) in conductores" :key="conductor.id" class="mb-2 border-b border-gray-600 pb-2">
-                        <div><strong>{{ index + 1 }}. {{ conductor.nombre }} {{ conductor.apellido }}</strong></div>
-                        <div class="pl-4">
-                            <div>📁 img_url (BD): <span class="text-yellow-300">{{ conductor.img_url || 'null' }}</span></div>
-                            <div>🌐 img_url_full (generada): <span class="text-green-300">{{ conductor.img_url_full || 'null' }}</span></div>
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="overflow-hidden shadow-sm sm:rounded-lg" style="background-color: var(--card-bg)">
                     <div class="p-6" style="color: var(--text-primary)">
                         <!-- Lista de Conductores -->
