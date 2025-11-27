@@ -197,8 +197,8 @@ const submit = () => {
                                     v-model="form.cliente_id"
                                     :required="true"
                                     :error="form.errors.cliente_id"
-                                    endpoint="/encomiendas-buscar-cliente"
-                                    registro-endpoint="/encomiendas-registrar-cliente"
+                                    route-name-buscar="encomiendas.buscar-cliente"
+                                    route-name-registrar="encomiendas.registrar-cliente"
                                 />
                                 <p v-if="!form.errors.cliente_id" class="mt-1 text-sm" style="color: var(--text-secondary)">
                                     Persona que envía el paquete. Puede buscar o registrar nuevo cliente.

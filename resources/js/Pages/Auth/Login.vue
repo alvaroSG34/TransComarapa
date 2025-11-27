@@ -204,8 +204,21 @@ const submit = () => {
                 </div>
             </form>
 
+            <!-- Register Link -->
+            <div class="text-center border-t pt-6" style="border-color: var(--border-color)">
+                <p class="text-sm text-muted-foreground">
+                    ¿No tienes una cuenta?
+                    <Link
+                        :href="route('register')"
+                        class="ml-1 font-medium text-primary hover:text-primary/80 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1"
+                    >
+                        Regístrate aquí
+                    </Link>
+                </p>
+            </div>
+
             <!-- Footer -->
-            <div class="text-center">
+            <div class="text-center mt-6">
                 <p class="text-xs text-muted-foreground">
                     © {{ new Date().getFullYear() }} TransComarapa. Todos los
                     derechos reservados.

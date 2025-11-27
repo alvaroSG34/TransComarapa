@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import { Combobox, ComboboxInput, ComboboxOptions, ComboboxOption, ComboboxButton, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
+import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 
 const props = defineProps({
@@ -10,13 +11,13 @@ const props = defineProps({
         default: false
     },
     error: String,
-    endpoint: {
+    routeNameBuscar: {
         type: String,
-        default: '/encomiendas-buscar-cliente'
+        default: 'encomiendas.buscar-cliente'
     },
-    registroEndpoint: {
+    routeNameRegistrar: {
         type: String,
-        default: '/encomiendas-registrar-cliente'
+        default: 'encomiendas.registrar-cliente'
     }
 });
 
@@ -49,7 +50,7 @@ watch(query, async (newQuery) => {
 
     buscando.value = true;
     try {
-        const response = await axios.get(props.endpoint, {
+        const response = await axios.get(route(props.routeNameBuscar), {
             params: { q: newQuery }
         });
         clientes.value = response.data;
@@ -90,7 +91,7 @@ const registrarCliente = async () => {
     registrando.value = true;
 
     try {
-        const response = await axios.post(props.registroEndpoint, nuevoCliente.value);
+        const response = await axios.post(route(props.routeNameRegistrar), nuevoCliente.value);
         
         if (response.data.success) {
             const cliente = response.data.cliente;
@@ -205,15 +206,15 @@ const displayValue = computed(() => {
             <div class="fixed inset-0 bg-black/30" aria-hidden="true" />
             
             <div class="fixed inset-0 flex items-center justify-center p-4">
-                <DialogPanel class="w-full max-w-md rounded-lg p-6 shadow-xl" style="background-color: var(--card-bg)">
-                    <DialogTitle class="text-lg font-semibold mb-4" style="color: var(--text-primary)">
+                <DialogPanel class="w-full max-w-md rounded-lg p-6 shadow-xl bg-white">
+                    <DialogTitle class="text-lg font-semibold mb-4 text-gray-900">
                         Registrar Nuevo Cliente
                     </DialogTitle>
 
                     <form @submit.prevent="registrarCliente" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
+                                <label class="block text-sm font-medium mb-1 text-gray-700">
                                     Nombre *
                                 </label>
                                 <input
@@ -221,8 +222,7 @@ const displayValue = computed(() => {
                                     type="text"
                                     required
                                     maxlength="100"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                    class="w-full rounded-md border-gray-300 bg-white text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     :class="{ 'border-red-500': erroresRegistro.nombre }"
                                 />
                                 <p v-if="erroresRegistro.nombre" class="mt-1 text-xs text-red-600">
@@ -231,7 +231,7 @@ const displayValue = computed(() => {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
+                                <label class="block text-sm font-medium mb-1 text-gray-700">
                                     Apellido *
                                 </label>
                                 <input
@@ -239,8 +239,7 @@ const displayValue = computed(() => {
                                     type="text"
                                     required
                                     maxlength="100"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                    class="w-full rounded-md border-gray-300 bg-white text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     :class="{ 'border-red-500': erroresRegistro.apellido }"
                                 />
                                 <p v-if="erroresRegistro.apellido" class="mt-1 text-xs text-red-600">
@@ -250,7 +249,7 @@ const displayValue = computed(() => {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
+                            <label class="block text-sm font-medium mb-1 text-gray-700">
                                 CI *
                             </label>
                             <input
@@ -258,8 +257,7 @@ const displayValue = computed(() => {
                                 type="text"
                                 required
                                 maxlength="20"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                class="w-full rounded-md border-gray-300 bg-white text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 :class="{ 'border-red-500': erroresRegistro.ci }"
                             />
                             <p v-if="erroresRegistro.ci" class="mt-1 text-xs text-red-600">
@@ -268,7 +266,7 @@ const displayValue = computed(() => {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
+                            <label class="block text-sm font-medium mb-1 text-gray-700">
                                 Teléfono *
                             </label>
                             <input
@@ -276,8 +274,7 @@ const displayValue = computed(() => {
                                 type="tel"
                                 required
                                 maxlength="20"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                class="w-full rounded-md border-gray-300 bg-white text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 :class="{ 'border-red-500': erroresRegistro.telefono }"
                             />
                             <p v-if="erroresRegistro.telefono" class="mt-1 text-xs text-red-600">
@@ -286,21 +283,20 @@ const displayValue = computed(() => {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-1" style="color: var(--text-primary)">
+                            <label class="block text-sm font-medium mb-1 text-gray-700">
                                 Correo Electrónico
                             </label>
                             <input
                                 v-model="nuevoCliente.correo"
                                 type="email"
                                 maxlength="100"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                style="background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color)"
+                                class="w-full rounded-md border-gray-300 bg-white text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 :class="{ 'border-red-500': erroresRegistro.correo }"
                             />
                             <p v-if="erroresRegistro.correo" class="mt-1 text-xs text-red-600">
                                 {{ erroresRegistro.correo[0] }}
                             </p>
-                            <p class="mt-1 text-xs" style="color: var(--text-secondary)">
+                            <p class="mt-1 text-xs text-gray-500">
                                 Opcional
                             </p>
                         </div>
@@ -309,16 +305,14 @@ const displayValue = computed(() => {
                             <button
                                 type="button"
                                 @click="mostrarModal = false"
-                                class="px-4 py-2 rounded-md text-sm font-medium"
-                                style="background-color: var(--button-secondary-bg); color: var(--button-secondary-text)"
+                                class="px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-800 hover:bg-gray-300"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 :disabled="registrando"
-                                class="px-4 py-2 rounded-md text-sm font-medium"
-                                style="background-color: var(--button-primary-bg); color: var(--button-primary-text)"
+                                class="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
                                 :class="{ 'opacity-50 cursor-not-allowed': registrando }"
                             >
                                 {{ registrando ? 'Guardando...' : 'Guardar y Continuar' }}

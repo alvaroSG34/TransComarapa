@@ -273,8 +273,8 @@ const asientosDisponiblesArray = computed(() => {
                                     v-model="form.cliente_id"
                                     :required="true"
                                     :error="form.errors.cliente_id"
-                                    endpoint="/boletos-buscar-cliente"
-                                    registro-endpoint="/boletos-registrar-cliente"
+                                    route-name-buscar="boletos.buscar-cliente"
+                                    route-name-registrar="boletos.registrar-cliente"
                                 />
                                 <p v-if="!form.errors.cliente_id" class="mt-1 text-sm" style="color: var(--text-secondary)">
                                     Cliente que comprará el boleto. Puede buscar o registrar nuevo cliente.
