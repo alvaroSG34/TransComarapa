@@ -62,21 +62,20 @@ class SecretariaController extends Controller
             // Usaremos un ID temporal, luego lo actualizaremos después de crear el usuario
             $filename = 'secretaria-temp-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('profiles', $filename, 'public');
-            $validated['img_url'] = '/storage/' . $path;
+            $validated['img_url'] = $path; // Solo guardar el path relativo: profiles/user-X.png
         }
 
         $usuario = $this->usuarioRepository->create($validated);
 
         // Si se subió una imagen, renombrarla con el ID real del usuario
         if ($request->hasFile('avatar') && isset($validated['img_url'])) {
-            $oldPath = str_replace('/storage/', '', $validated['img_url']);
-            $oldPath = ltrim($oldPath, '/');
+            $oldPath = $validated['img_url']; // Ya es un path relativo
             $newFilename = 'user-' . $usuario->id . '-' . time() . '.' . $request->file('avatar')->getClientOriginalExtension();
             $newPath = 'profiles/' . $newFilename;
             
             if (Storage::disk('public')->exists($oldPath)) {
                 Storage::disk('public')->move($oldPath, $newPath);
-                $usuario->img_url = '/storage/' . $newPath;
+                $usuario->img_url = $newPath; // Guardar solo el path relativo
                 $usuario->save();
             }
         }
@@ -150,11 +149,16 @@ class SecretariaController extends Controller
 
         // Manejar subida de imagen de perfil (opcional)
         if ($request->hasFile('avatar')) {
-            // Eliminar imagen anterior si existe (solo si es local)
-            if ($secretaria->img_url && str_contains($secretaria->img_url, '/storage/')) {
-                $oldPath = str_replace('/storage/', '', $secretaria->img_url);
+            // Eliminar imagen anterior si existe
+            if ($secretaria->img_url) {
+                // Limpiar el path por si tiene /storage/ (compatibilidad con registros antiguos)
+                $oldPath = $secretaria->img_url;
+                if (str_starts_with($oldPath, '/storage/')) {
+                    $oldPath = substr($oldPath, 9); // Remover '/storage/'
+                }
                 $oldPath = ltrim($oldPath, '/');
-                if ($oldPath) {
+                
+                if ($oldPath && Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);
                 }
             }
@@ -163,7 +167,7 @@ class SecretariaController extends Controller
             $file = $request->file('avatar');
             $filename = 'user-' . $secretaria->id . '-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('profiles', $filename, 'public');
-            $validated['img_url'] = '/storage/' . $path;
+            $validated['img_url'] = $path; // Solo guardar el path relativo: profiles/user-X.png
         }
 
         $this->usuarioRepository->update($id, $validated);

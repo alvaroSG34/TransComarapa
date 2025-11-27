@@ -69,15 +69,15 @@ const eliminarSecretaria = (id, nombre, apellido) => {
                                             <div class="flex items-center">
                                                 <div class="h-16 w-16 flex-shrink-0 relative">
                                                     <img
-                                                        v-if="secretaria.img_url"
-                                                        :src="secretaria.img_url"
+                                                        v-if="secretaria.img_url_full"
+                                                        :src="secretaria.img_url_full"
                                                         :alt="secretaria.nombre + ' ' + secretaria.apellido"
                                                         class="h-16 w-16 rounded-full object-cover border-2"
                                                         style="border-color: var(--border-color)"
                                                         @error="$event.target.style.display='none'"
                                                     />
                                                     <div
-                                                        v-if="!secretaria.img_url"
+                                                        v-if="!secretaria.img_url_full"
                                                         class="h-16 w-16 rounded-full flex items-center justify-center"
                                                         style="background-color: var(--input-bg)"
                                                     >

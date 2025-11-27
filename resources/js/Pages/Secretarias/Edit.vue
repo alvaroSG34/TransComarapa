@@ -21,7 +21,7 @@ const form = useForm({
     avatar: null
 });
 
-const avatarPreview = ref(props.secretaria.img_url || null);
+const avatarPreview = ref(props.secretaria.img_url_full || null);
 const fileInput = ref(null);
 
 const handleFileChange = (event) => {
@@ -52,7 +52,7 @@ const handleFileChange = (event) => {
 
 const removeAvatar = () => {
     form.avatar = null;
-    avatarPreview.value = props.secretaria.img_url || null;
+    avatarPreview.value = props.secretaria.img_url_full || null;
     if (fileInput.value) {
         fileInput.value.value = '';
     }
