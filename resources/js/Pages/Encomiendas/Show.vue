@@ -427,10 +427,10 @@ const confirmarPagoDestino = () => {
                         </div>
 
                         <!-- Foto del Paquete -->
-                        <div v-if="encomienda.img_url" class="mb-6">
+                        <div v-if="encomienda.img_url_full" class="mb-6">
                             <h4 class="text-lg font-semibold mb-3">Foto del Paquete</h4>
                             <div class="p-4 rounded-lg" style="background-color: var(--header-bg)">
-                                <img :src="encomienda.img_url" alt="Foto del paquete" class="max-w-md rounded-lg shadow-md">
+                                <img :src="encomienda.img_url_full" alt="Foto del paquete" class="max-w-md rounded-lg shadow-md">
                             </div>
                         </div>
 

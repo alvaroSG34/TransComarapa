@@ -19,7 +19,7 @@ const form = useForm({
     avatar: null
 });
 
-const imagePreview = ref(props.vehiculo.img_url || null);
+const imagePreview = ref(props.vehiculo.img_url_full || null);
 const fileInput = ref(null);
 
 const handleFileChange = (event) => {
@@ -50,7 +50,7 @@ const handleFileChange = (event) => {
 
 const removeImage = () => {
     form.avatar = null;
-    imagePreview.value = props.vehiculo.img_url || null;
+    imagePreview.value = props.vehiculo.img_url_full || null;
     if (fileInput.value) {
         fileInput.value.value = '';
     }

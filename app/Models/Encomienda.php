@@ -27,11 +27,46 @@ class Encomienda extends Model
         'monto_pagado_destino',
     ];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'img_url_full',
+    ];
+
     protected function casts(): array
     {
         return [
             'peso' => 'decimal:2',
         ];
+    }
+
+    // Accessor para obtener la URL completa de la imagen
+    protected function imgUrlFull(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function () {
+                if (!$this->img_url) {
+                    return null;
+                }
+                
+                // Si ya tiene la URL completa, retornarla tal cual
+                if (str_starts_with($this->img_url, 'http://') || str_starts_with($this->img_url, 'https://')) {
+                    return $this->img_url;
+                }
+                
+                // Si tiene /storage/ al inicio, quitarlo (por compatibilidad con registros antiguos)
+                $path = $this->img_url;
+                if (str_starts_with($path, '/storage/')) {
+                    $path = substr($path, 9); // Remover '/storage/'
+                }
+                
+                // Construir la URL completa usando url() para forzar URL absoluta
+                return url('storage/' . $path);
+            }
+        );
     }
 
     // Relaciones

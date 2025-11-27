@@ -52,12 +52,16 @@ class ProfileController extends Controller
 
         // Manejar subida de imagen de perfil
         if ($request->hasFile('avatar')) {
-            // Eliminar imagen anterior si existe (solo si es local)
-            if ($user->img_url && str_contains($user->img_url, '/storage/')) {
-                // Extraer el path relativo desde la URL
-                $oldPath = str_replace('/storage/', '', $user->img_url);
+            // Eliminar imagen anterior si existe
+            if ($user->img_url) {
+                // Limpiar el path por si tiene /storage/ (compatibilidad con registros antiguos)
+                $oldPath = $user->img_url;
+                if (str_starts_with($oldPath, '/storage/')) {
+                    $oldPath = substr($oldPath, 9); // Remover '/storage/'
+                }
                 $oldPath = ltrim($oldPath, '/');
-                if ($oldPath) {
+                
+                if ($oldPath && Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);
                 }
             }
@@ -67,8 +71,8 @@ class ProfileController extends Controller
             $filename = 'user-' . $user->id . '-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('profiles', $filename, 'public');
             
-            // Guardar URL en la base de datos
-            $user->img_url = '/storage/' . $path;
+            // Guardar solo el path relativo en la base de datos
+            $user->img_url = $path; // Solo guardar: profiles/user-X.png
         }
 
         $user->save();

@@ -27,7 +27,7 @@ const form = useForm({
     monto_pagado_origen: props.encomienda.monto_pagado_origen || ''
 });
 
-const imagePreview = ref(props.encomienda.img_url || null);
+const imagePreview = ref(props.encomienda.img_url_full || null);
 const fileInput = ref(null);
 
 const handleFileChange = (event) => {
@@ -58,7 +58,7 @@ const handleFileChange = (event) => {
 
 const removeImage = () => {
     form.avatar = null;
-    imagePreview.value = props.encomienda.img_url || null;
+    imagePreview.value = props.encomienda.img_url_full || null;
     if (fileInput.value) {
         fileInput.value.value = '';
     }

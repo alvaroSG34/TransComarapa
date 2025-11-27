@@ -89,9 +89,9 @@ const eliminarVehiculo = (id, placa) => {
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div v-if="vehiculo.img_url" class="flex items-center">
+                                            <div v-if="vehiculo.img_url_full" class="flex items-center">
                                                 <img 
-                                                    :src="vehiculo.img_url" 
+                                                    :src="vehiculo.img_url_full" 
                                                     :alt="vehiculo.placa" 
                                                     class="h-20 w-20 rounded-lg object-cover border-2"
                                                     style="border-color: var(--border-color)"

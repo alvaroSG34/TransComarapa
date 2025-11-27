@@ -65,7 +65,7 @@ class VehiculoController extends Controller
             $file = $request->file('avatar');
             $filename = 'vehiculo-' . time() . '-' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('vehiculos', $filename, 'public');
-            $validated['img_url'] = '/storage/' . $path;
+            $validated['img_url'] = $path; // Solo guardar el path relativo: vehiculos/vehiculo-X.png
         }
 
         $this->vehiculoRepository->create($validated);
@@ -128,11 +128,16 @@ class VehiculoController extends Controller
 
         // Manejar subida de imagen de vehículo (opcional)
         if ($request->hasFile('avatar')) {
-            // Eliminar imagen anterior si existe (solo si es local)
-            if ($vehiculo->img_url && str_contains($vehiculo->img_url, '/storage/')) {
-                $oldPath = str_replace('/storage/', '', $vehiculo->img_url);
+            // Eliminar imagen anterior si existe
+            if ($vehiculo->img_url) {
+                // Limpiar el path por si tiene /storage/ (compatibilidad con registros antiguos)
+                $oldPath = $vehiculo->img_url;
+                if (str_starts_with($oldPath, '/storage/')) {
+                    $oldPath = substr($oldPath, 9); // Remover '/storage/'
+                }
                 $oldPath = ltrim($oldPath, '/');
-                if ($oldPath) {
+                
+                if ($oldPath && Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);
                 }
             }
@@ -141,7 +146,7 @@ class VehiculoController extends Controller
             $file = $request->file('avatar');
             $filename = 'vehiculo-' . $id . '-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('vehiculos', $filename, 'public');
-            $validated['img_url'] = '/storage/' . $path;
+            $validated['img_url'] = $path; // Solo guardar el path relativo: vehiculos/vehiculo-X.png
         }
 
         $updated = $this->vehiculoRepository->update($id, $validated);

@@ -294,7 +294,7 @@ class EncomiendaController extends Controller
                     $file = request()->file('avatar');
                     $filename = 'encomienda-' . time() . '-' . uniqid() . '.' . $file->getClientOriginalExtension();
                     $path = $file->storeAs('encomiendas', $filename, 'public');
-                    $imgUrl = '/storage/' . $path;
+                    $imgUrl = $path; // Solo guardar el path relativo: encomiendas/encomienda-X.png
                     Log::info('Imagen del paquete guardada:', ['path' => $imgUrl]);
                 }
 
@@ -630,11 +630,16 @@ class EncomiendaController extends Controller
             $encomienda = DB::table('encomiendas')->where('venta_id', $id)->first();
             
             if (request()->hasFile('avatar')) {
-                // Eliminar imagen anterior si existe (solo si es local)
-                if ($encomienda && $encomienda->img_url && str_contains($encomienda->img_url, '/storage/')) {
-                    $oldPath = str_replace('/storage/', '', $encomienda->img_url);
+                // Eliminar imagen anterior si existe
+                if ($encomienda && $encomienda->img_url) {
+                    // Limpiar el path por si tiene /storage/ (compatibilidad con registros antiguos)
+                    $oldPath = $encomienda->img_url;
+                    if (str_starts_with($oldPath, '/storage/')) {
+                        $oldPath = substr($oldPath, 9); // Remover '/storage/'
+                    }
                     $oldPath = ltrim($oldPath, '/');
-                    if ($oldPath) {
+                    
+                    if ($oldPath && Storage::disk('public')->exists($oldPath)) {
                         Storage::disk('public')->delete($oldPath);
                     }
                 }
@@ -643,7 +648,7 @@ class EncomiendaController extends Controller
                 $file = request()->file('avatar');
                 $filename = 'encomienda-' . $id . '-' . time() . '.' . $file->getClientOriginalExtension();
                 $path = $file->storeAs('encomiendas', $filename, 'public');
-                $imgUrl = '/storage/' . $path;
+                $imgUrl = $path; // Solo guardar el path relativo: encomiendas/encomienda-X.png
             } else {
                 // Mantener la imagen actual si no se sube una nueva
                 $imgUrl = $encomienda->img_url ?? null;
