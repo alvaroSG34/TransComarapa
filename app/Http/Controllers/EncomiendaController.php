@@ -490,6 +490,24 @@ class EncomiendaController extends Controller
                 ->with('error', 'Encomienda no encontrada.');
         }
 
+        // Generar URL completa de la imagen (similar al accessor)
+        if ($encomienda->img_url) {
+            $path = $encomienda->img_url;
+            
+            // Si no es una URL completa, construirla
+            if (!str_starts_with($path, 'http://') && !str_starts_with($path, 'https://')) {
+                // Si tiene /storage/ al inicio, quitarlo
+                if (str_starts_with($path, '/storage/')) {
+                    $path = substr($path, 9);
+                }
+                $encomienda->img_url_full = url('storage/' . $path);
+            } else {
+                $encomienda->img_url_full = $path;
+            }
+        } else {
+            $encomienda->img_url_full = null;
+        }
+
         // Obtener PagoVenta de origen (num_cuota = 1) si existe
         $pagoOrigen = PagoVenta::where('venta_id', $id)
             ->where('num_cuota', 1)
@@ -579,6 +597,24 @@ class EncomiendaController extends Controller
             )
             ->orderBy('viajes.fecha_salida', 'asc')
             ->get();
+
+        // Generar URL completa de la imagen (similar al accessor)
+        if ($encomienda->img_url) {
+            $path = $encomienda->img_url;
+            
+            // Si no es una URL completa, construirla
+            if (!str_starts_with($path, 'http://') && !str_starts_with($path, 'https://')) {
+                // Si tiene /storage/ al inicio, quitarlo
+                if (str_starts_with($path, '/storage/')) {
+                    $path = substr($path, 9);
+                }
+                $encomienda->img_url_full = url('storage/' . $path);
+            } else {
+                $encomienda->img_url_full = $path;
+            }
+        } else {
+            $encomienda->img_url_full = null;
+        }
 
         return Inertia::render('Encomiendas/Edit', [
             'encomienda' => $encomienda,
