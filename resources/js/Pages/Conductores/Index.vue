@@ -1,9 +1,22 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
 
 const props = defineProps({
     conductores: Array
+});
+
+// Log de las rutas de imágenes para debugging
+onMounted(() => {
+    console.log('=== RUTAS DE IMÁGENES DE CONDUCTORES ===');
+    props.conductores.forEach((conductor, index) => {
+        console.log(`Conductor ${index + 1}: ${conductor.nombre} ${conductor.apellido}`);
+        console.log(`  - img_url (BD): ${conductor.img_url || 'null'}`);
+        console.log(`  - img_url_full (generada): ${conductor.img_url_full || 'null'}`);
+        console.log('---');
+    });
+    console.log('========================================');
 });
 
 const eliminarConductor = (id, nombre, apellido) => {
