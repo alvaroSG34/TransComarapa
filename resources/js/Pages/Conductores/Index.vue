@@ -69,15 +69,15 @@ const eliminarConductor = (id, nombre, apellido) => {
                                             <div class="flex items-center">
                                                 <div class="h-16 w-16 flex-shrink-0 relative">
                                                     <img
-                                                        v-if="conductor.img_url"
-                                                        :src="conductor.img_url"
+                                                        v-if="conductor.img_url_full"
+                                                        :src="conductor.img_url_full"
                                                         :alt="conductor.nombre + ' ' + conductor.apellido"
                                                         class="h-16 w-16 rounded-full object-cover border-2"
                                                         style="border-color: var(--border-color)"
                                                         @error="$event.target.style.display='none'"
                                                     />
                                                     <div
-                                                        v-if="!conductor.img_url"
+                                                        v-if="!conductor.img_url_full"
                                                         class="h-16 w-16 rounded-full flex items-center justify-center"
                                                         style="background-color: var(--input-bg)"
                                                     >

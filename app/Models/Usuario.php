@@ -54,6 +54,7 @@ class Usuario extends Authenticatable
     protected $appends = [
         'name',
         'email',
+        'img_url_full',
     ];
 
     /**
@@ -97,6 +98,32 @@ class Usuario extends Authenticatable
     public function setEmailAttribute($value)
     {
         $this->attributes['correo'] = $value;
+    }
+
+    // Accessor para obtener la URL completa de la imagen
+    protected function imgUrlFull(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (!$this->img_url) {
+                    return null;
+                }
+                
+                // Si ya tiene la URL completa, retornarla tal cual
+                if (str_starts_with($this->img_url, 'http://') || str_starts_with($this->img_url, 'https://')) {
+                    return $this->img_url;
+                }
+                
+                // Si tiene /storage/ al inicio, quitarlo (por compatibilidad con registros antiguos)
+                $path = $this->img_url;
+                if (str_starts_with($path, '/storage/')) {
+                    $path = substr($path, 9); // Remover '/storage/'
+                }
+                
+                // Construir la URL completa usando asset()
+                return asset('storage/' . $path);
+            }
+        );
     }
 
     // Relaciones
