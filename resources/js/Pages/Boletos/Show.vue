@@ -15,6 +15,163 @@ const imprimirComprobante = () => {
     window.print();
 };
 
+const imprimirTicket = () => {
+    // Crear una ventana nueva para el ticket
+    const ventanaTicket = window.open('', '_blank', 'width=300,height=600');
+    if (!ventanaTicket) {
+        alert('Por favor, permite las ventanas emergentes para imprimir el ticket');
+        return;
+    }
+
+    const contenido = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Ticket de Boleto</title>
+            <style>
+                @media print {
+                    @page {
+                        size: 72mm auto;
+                        margin: 0;
+                    }
+                    body {
+                        width: 72mm;
+                        margin: 0;
+                        padding: 5mm;
+                        font-family: 'Courier New', monospace;
+                        font-size: 10pt;
+                    }
+                }
+                body {
+                    width: 72mm;
+                    margin: 0;
+                    padding: 5mm;
+                    font-family: 'Courier New', monospace;
+                    font-size: 10pt;
+                    line-height: 1.3;
+                }
+                .ticket {
+                    width: 100%;
+                    max-width: 72mm;
+                }
+                .centrado {
+                    text-align: center;
+                }
+                .separador {
+                    border-top: 1px dashed #000;
+                    margin: 8px 0;
+                }
+                .negrita {
+                    font-weight: bold;
+                }
+                .titulo {
+                    font-size: 12pt;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .subtitulo {
+                    font-size: 9pt;
+                    margin-bottom: 3px;
+                }
+                .texto {
+                    font-size: 9pt;
+                    margin: 2px 0;
+                }
+                .qr-container {
+                    text-align: center;
+                    margin: 10px 0;
+                }
+                .qr-container img {
+                    max-width: 150px;
+                    height: auto;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="ticket">
+                <div class="centrado">
+                    <div class="titulo">TRANSCOMARAPA</div>
+                    <div class="subtitulo">COMPROBANTE DE BOLETO</div>
+                    <div class="separador"></div>
+                </div>
+                
+                <div class="texto">
+                    <div class="negrita">Boleto #${props.boleto.id}</div>
+                    <div>Fecha: ${new Date(props.boleto.fecha_venta).toLocaleString('es-BO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">RUTA</div>
+             
+                    <div>${props.boleto.origen} → ${props.boleto.destino}</div>
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">VIAJE</div>
+                    <div>Salida: ${new Date(props.boleto.fecha_salida).toLocaleString('es-BO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+                    ${props.boleto.fecha_llegada ? `<div>Llegada: ${new Date(props.boleto.fecha_llegada).toLocaleString('es-BO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>` : ''}
+                    <div>Asiento: ${props.boleto.asiento}</div>
+                    <div>Vehículo: ${props.boleto.vehiculo_placa}</div>
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">PASAJERO</div>
+                    <div>${props.boleto.cliente_nombre} ${props.boleto.cliente_apellido}</div>
+                    <div>CI: ${props.boleto.cliente_ci}</div>
+                    ${props.boleto.cliente_telefono ? `<div>Tel: ${props.boleto.cliente_telefono}</div>` : ''}
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">PAGO</div>
+                    <div>Monto: Bs ${parseFloat(props.boleto.monto_total).toFixed(2)}</div>
+                    <div>Método: ${props.boleto.metodo_pago || 'Efectivo'}</div>
+                    <div>Estado: ${props.boleto.estado_pago}</div>
+                </div>
+                
+                ${props.boleto.qr_base64 && props.boleto.metodo_pago === 'QR' ? `
+                    <div class="separador"></div>
+                    <div class="qr-container">
+                        <div class="negrita">CÓDIGO QR DE PAGO</div>
+                        <img src="data:image/png;base64,${props.boleto.qr_base64}" alt="QR de Pago">
+                        ${props.boleto.transaction_id ? `<div style="font-size: 8pt; margin-top: 5px;">ID: ${props.boleto.transaction_id}</div>` : ''}
+                    </div>
+                ` : ''}
+                
+                <div class="separador"></div>
+                
+                <div class="centrado">
+                    <div class="texto" style="font-size: 8pt; margin-top: 10px;">
+                        Gracias por su preferencia
+                    </div>
+                    <div class="texto" style="font-size: 8pt;">
+                        ${new Date().toLocaleDateString('es-BO')} ${new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    ventanaTicket.document.write(contenido);
+    ventanaTicket.document.close();
+    
+    // Esperar a que se cargue el contenido y luego imprimir
+    setTimeout(() => {
+        ventanaTicket.print();
+        // Cerrar la ventana después de imprimir (opcional)
+        // ventanaTicket.close();
+    }, 250);
+};
+
 const verificarEstadoPago = async () => {
     if (verificando.value) return;
     
@@ -247,6 +404,18 @@ const cerrarModalQr = () => {
 
                         <!-- Botones de Acción -->
                         <div class="flex gap-3 mt-6 print:hidden">
+                            <button
+                                @click="imprimirTicket"
+                                type="button"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 hover:opacity-90"
+                                style="background-color: #059669;"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                Imprimir Ticket
+                            </button>
+
                             <button
                                 @click="imprimirComprobante"
                                 type="button"

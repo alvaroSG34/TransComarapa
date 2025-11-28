@@ -40,6 +40,180 @@ const imprimirComprobante = () => {
     window.print();
 };
 
+const imprimirTicket = () => {
+    // Crear una ventana nueva para el ticket
+    const ventanaTicket = window.open('', '_blank', 'width=300,height=600');
+    if (!ventanaTicket) {
+        alert('Por favor, permite las ventanas emergentes para imprimir el ticket');
+        return;
+    }
+
+    const contenido = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Ticket de Encomienda</title>
+            <style>
+                @media print {
+                    @page {
+                        size: 72mm auto;
+                        margin: 0;
+                    }
+                    body {
+                        width: 72mm;
+                        margin: 0;
+                        padding: 5mm;
+                        font-family: 'Courier New', monospace;
+                        font-size: 10pt;
+                    }
+                }
+                body {
+                    width: 72mm;
+                    margin: 0;
+                    padding: 5mm;
+                    font-family: 'Courier New', monospace;
+                    font-size: 10pt;
+                    line-height: 1.3;
+                }
+                .ticket {
+                    width: 100%;
+                    max-width: 72mm;
+                }
+                .centrado {
+                    text-align: center;
+                }
+                .separador {
+                    border-top: 1px dashed #000;
+                    margin: 8px 0;
+                }
+                .negrita {
+                    font-weight: bold;
+                }
+                .titulo {
+                    font-size: 12pt;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .subtitulo {
+                    font-size: 9pt;
+                    margin-bottom: 3px;
+                }
+                .texto {
+                    font-size: 9pt;
+                    margin: 2px 0;
+                }
+                .qr-container {
+                    text-align: center;
+                    margin: 10px 0;
+                }
+                .qr-container img {
+                    max-width: 150px;
+                    height: auto;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="ticket">
+                <div class="centrado">
+                    <div class="titulo">TRANSCOMARAPA</div>
+                    <div class="subtitulo">COMPROBANTE DE ENCOMIENDA</div>
+                    <div class="separador"></div>
+                </div>
+                
+                <div class="texto">
+                    <div class="negrita">Encomienda #${props.encomienda.venta_id}</div>
+                    <div>Fecha: ${new Date(props.encomienda.fecha_registro).toLocaleString('es-BO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">RUTA</div>
+                   
+                    <div>${props.encomienda.origen} → ${props.encomienda.destino}</div>
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">REMITENTE</div>
+                    <div>${props.encomienda.cliente_nombre} ${props.encomienda.cliente_apellido}</div>
+                    <div>CI: ${props.encomienda.cliente_ci}</div>
+                    ${props.encomienda.cliente_telefono ? `<div>Tel: ${props.encomienda.cliente_telefono}</div>` : ''}
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">DESTINATARIO</div>
+                    <div>${props.encomienda.nombre_destinatario}</div>
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">PAQUETE</div>
+                    <div>Peso: ${parseFloat(props.encomienda.peso).toFixed(2)} kg</div>
+                    <div>Modalidad: ${props.encomienda.modalidad_pago}</div>
+                    ${props.encomienda.descripcion ? `<div style="margin-top: 3px;">Descripción: ${props.encomienda.descripcion}</div>` : ''}
+                </div>
+                
+                <div class="separador"></div>
+                
+                <div class="texto">
+                    <div class="negrita">PAGOS</div>
+                    <div>Total: Bs ${parseFloat(props.encomienda.monto_total).toFixed(2)}</div>
+                    <div>Origen: Bs ${parseFloat(props.encomienda.monto_pagado_origen || 0).toFixed(2)}</div>
+                    <div>Destino: Bs ${parseFloat(props.encomienda.monto_pagado_destino || 0).toFixed(2)}</div>
+                    <div>Pendiente: Bs ${montoPendiente.value.toFixed(2)}</div>
+                    <div>Estado: ${props.encomienda.estado_pago}</div>
+                </div>
+                
+                ${props.pago_origen && props.pago_origen.qr_base64 && props.pago_origen.estado_pago === 'Pendiente' ? `
+                    <div class="separador"></div>
+                    <div class="qr-container">
+                        <div class="negrita">QR PAGO ORIGEN</div>
+                        <div class="texto">Bs ${parseFloat(props.pago_origen.monto).toFixed(2)}</div>
+                        <img src="data:image/png;base64,${props.pago_origen.qr_base64}" alt="QR Origen">
+                        ${props.pago_origen.transaction_id ? `<div style="font-size: 8pt; margin-top: 5px;">ID: ${props.pago_origen.transaction_id}</div>` : ''}
+                    </div>
+                ` : ''}
+                
+                ${props.pago_destino && props.pago_destino.qr_base64 && props.pago_destino.estado_pago === 'Pendiente' ? `
+                    <div class="separador"></div>
+                    <div class="qr-container">
+                        <div class="negrita">QR PAGO DESTINO</div>
+                        <div class="texto">Bs ${parseFloat(props.pago_destino.monto).toFixed(2)}</div>
+                        <img src="data:image/png;base64,${props.pago_destino.qr_base64}" alt="QR Destino">
+                        ${props.pago_destino.transaction_id ? `<div style="font-size: 8pt; margin-top: 5px;">ID: ${props.pago_destino.transaction_id}</div>` : ''}
+                    </div>
+                ` : ''}
+                
+                <div class="separador"></div>
+                
+                <div class="centrado">
+                    <div class="texto" style="font-size: 8pt; margin-top: 10px;">
+                        Gracias por su preferencia
+                    </div>
+                    <div class="texto" style="font-size: 8pt;">
+                        ${new Date().toLocaleDateString('es-BO')} ${new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    ventanaTicket.document.write(contenido);
+    ventanaTicket.document.close();
+    
+    // Esperar a que se cargue el contenido y luego imprimir
+    setTimeout(() => {
+        ventanaTicket.print();
+    }, 250);
+};
+
 const verificarEstadoOrigen = async () => {
     if (verificandoOrigen.value) return;
     
@@ -436,6 +610,18 @@ const confirmarPagoDestino = () => {
 
                         <!-- Botones de Acción -->
                         <div class="flex gap-3 mt-6 print:hidden">
+                            <button
+                                @click="imprimirTicket"
+                                type="button"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 hover:opacity-90"
+                                style="background-color: #059669;"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                Imprimir Ticket
+                            </button>
+
                             <button
                                 @click="imprimirComprobante"
                                 type="button"
