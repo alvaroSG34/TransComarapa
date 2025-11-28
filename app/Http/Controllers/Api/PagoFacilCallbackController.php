@@ -130,7 +130,7 @@ class PagoFacilCallbackController extends Controller
             2 => 'Pagado',              // Completado/Pagado
             3 => 'Cancelado',           // Anulado
             4 => 'Cancelado',           // Vencido
-            5 => 'Pendiente',           // Validación Pendiente
+            5 => 'Pagado',              // Validación Pendiente (también se considera pagado)
             default => 'Pendiente',
         };
     }

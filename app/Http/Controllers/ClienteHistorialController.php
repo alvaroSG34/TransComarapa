@@ -196,11 +196,15 @@ class ClienteHistorialController extends Controller
             }
 
             // Verificar si el pago fue completado
-            // paymentStatus: 1 o 5 = Pagado exitosamente
-            $estadoPagoFacil = $resultado['data']['values']['paymentStatus'] ?? null;
+            // State: 1=Pendiente, 2=Pagado, 3=Anulado, 4=Vencido, 5=Validación Pendiente
+            // También puede venir como 'paymentStatus' en algunos casos
+            $estadoPagoFacil = $resultado['data']['values']['State'] 
+                ?? $resultado['data']['values']['paymentStatus'] 
+                ?? $resultado['data']['values']['state'] 
+                ?? null;
             
-            // Si el estado es 1 o 5 (pagado), actualizar en BD
-            if ($estadoPagoFacil == 1 || $estadoPagoFacil == 5) {
+            // Estados 2 o 5 significan "Pagado"
+            if ($estadoPagoFacil == 2 || $estadoPagoFacil == 5) {
                 DB::table('pago_ventas')
                     ->where('id', $pagoVenta->id)
                     ->update([
