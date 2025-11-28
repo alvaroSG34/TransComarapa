@@ -6,14 +6,6 @@ const props = defineProps({
     venta: Object
 });
 
-const marcarComoPagado = () => {
-    if (confirm('¿Confirmar que esta venta ha sido pagada?')) {
-        router.post(route('ventas.marcar-pagado', props.venta.id), {}, {
-            preserveScroll: true
-        });
-    }
-};
-
 const cancelarVenta = () => {
     if (confirm('¿Está seguro de cancelar esta venta? Esta acción no se puede deshacer.')) {
         router.post(route('ventas.cancelar', props.venta.id), {}, {
@@ -266,14 +258,6 @@ const esEncomienda = props.venta.tipo === 'Encomienda';
                         style="background-color: var(--button-secondary-bg); color: var(--button-secondary-text)"
                     >
                         🖨️ Imprimir Comprobante
-                    </button>
-
-                    <button
-                        v-if="venta.estado_pago === 'Pendiente'"
-                        @click="marcarComoPagado"
-                        class="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700"
-                    >
-                        ✓ Marcar como Pagado
                     </button>
 
                     <button

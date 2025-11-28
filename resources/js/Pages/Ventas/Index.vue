@@ -45,16 +45,6 @@ const ventasCanceladas = computed(() => {
     return props.ventas.filter(venta => venta.estado_pago === 'Cancelado');
 });
 
-const marcarComoPagado = (ventaId) => {
-    if (confirm('¿Confirmar que esta venta ha sido pagada?')) {
-        router.post(route('ventas.marcar-pagado', ventaId), {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Recargar datos
-            }
-        });
-    }
-};
 
 const getEstadoPagoColor = (estado) => {
     const colores = {
@@ -273,13 +263,6 @@ const obtenerDetalle = (venta) => {
                                             >
                                                 Ver
                                             </a>
-                                            <button
-                                                v-if="venta.estado_pago === 'Pendiente'"
-                                                @click="marcarComoPagado(venta.id)"
-                                                class="text-green-600 hover:text-green-900"
-                                            >
-                                                Marcar Pagado
-                                            </button>
                                         </td>
                                     </tr>
                                 </tbody>
