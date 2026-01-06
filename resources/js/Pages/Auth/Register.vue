@@ -4,6 +4,7 @@ import InputError from '@/Components/InputError.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
 import { useValidation } from '@/composables/useValidation';
+import { PAISES } from '@/utils/paises.js';
 
 // Activar validaciones HTML5 en español (opcional)
 // useHtml5Validation();
@@ -14,7 +15,9 @@ const { errors: clientErrors, validate, validateConfirmed, clearError, setErrors
 const form = useForm({
     nombre: '',
     apellido: '',
+    pais: 'Bolivia',
     ci: '',
+    codigo_pais_telefono: '+591',
     telefono: '',
     email: '',
     password: '',
@@ -22,12 +25,13 @@ const form = useForm({
 });
 
 const submit = () => {
-    // Definir reglas de validación
+    // Definir reglas de validación (más flexibles para usuarios internacionales)
     const rules = {
-        nombre: ['required', 'min:2', 'max:255', 'alpha'],
-        apellido: ['required', 'min:2', 'max:255', 'alpha'],
-        ci: ['required', 'min:5', 'max:20', 'alpha_num'],
-        telefono: ['required', 'min:7', 'max:20'],
+        nombre: ['required', 'min:2', 'max:255'],
+        apellido: ['required', 'min:2', 'max:255'],
+        pais: ['required'],
+        ci: ['required', 'min:3', 'max:50'], // Más flexible para documentos internacionales
+        telefono: ['required', 'min:6', 'max:20'],
         email: ['required', 'email', 'max:255'],
         password: ['required', 'min:8'],
         password_confirmation: ['required'],
@@ -64,7 +68,7 @@ const handleInput = (field) => {
     <GuestLayout>
         <Head title="Registrarse - TransComarapa" />
 
-        <div class="w-full max-w-md mx-auto">
+        <div class="w-full mx-auto">
             <!-- Header -->
             <div class="text-center mb-8">
                 <div class="flex items-center justify-center gap-2 mb-3">
@@ -129,18 +133,42 @@ const handleInput = (field) => {
                     </div>
                 </div>
 
+                <!-- País -->
+                <div>
+                    <label for="pais" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+                        País
+                    </label>
+                    <select
+                        id="pais"
+                        v-model="form.pais"
+                        @change="handleInput('pais')"
+                        class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+                        :class="(form.errors.pais || clientErrors.pais) ? 'border-red-500 focus:ring-red-500' : ''"
+                        style="
+                            background-color: var(--bg-secondary);
+                            color: var(--text-primary);
+                            border-color: var(--border-primary);
+                        "
+                    >
+                        <option v-for="pais in PAISES" :key="pais.iso" :value="pais.nombre">
+                            {{ pais.nombre }}
+                        </option>
+                    </select>
+                    <InputError class="mt-2" :message="clientErrors.pais || form.errors.pais" />
+                </div>
+
                 <!-- CI y Teléfono en una fila -->
                 <div class="grid grid-cols-2 gap-4">
-                    <!-- CI -->
+                    <!-- Documento de Identidad -->
                     <div>
                         <label for="ci" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
-                            CI
+                            Documento
                         </label>
                         <input
                             id="ci"
                             type="text"
                             v-model="form.ci"
-                            placeholder="12345678"
+                            placeholder="CI, DNI, Pasaporte"
                             @input="handleInput('ci')"
                             class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
                             :class="(form.errors.ci || clientErrors.ci) ? 'border-red-500 focus:ring-red-500' : ''"
@@ -151,28 +179,46 @@ const handleInput = (field) => {
                             "
                         />
                         <InputError class="mt-2" :message="clientErrors.ci || form.errors.ci" />
+                        <p class="text-xs mt-1" style="color: var(--text-secondary);">
+                            CI, DNI, Pasaporte, etc.
+                        </p>
                     </div>
 
-                    <!-- Teléfono -->
+                    <!-- Teléfono con código de país -->
                     <div>
                         <label for="telefono" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
                             Teléfono
                         </label>
-                        <input
-                            id="telefono"
-                            type="tel"
-                            v-model="form.telefono"
-                            autocomplete="tel"
-                            placeholder="71234567"
-                            @input="handleInput('telefono')"
-                            class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-                            :class="(form.errors.telefono || clientErrors.telefono) ? 'border-red-500 focus:ring-red-500' : ''"
-                            style="
-                                background-color: var(--bg-secondary);
-                                color: var(--text-primary);
-                                border-color: var(--border-primary);
-                            "
-                        />
+                        <div class="flex gap-2">
+                            <select
+                                v-model="form.codigo_pais_telefono"
+                                class="w-[80px] py-3 text-xs rounded-lg border transition-all focus:outline-none focus:ring-2"
+                                style="
+                                    background-color: var(--bg-secondary);
+                                    color: var(--text-primary);
+                                    border-color: var(--border-primary);
+                                "
+                            >
+                                <option v-for="pais in PAISES" :key="pais.codigo" :value="pais.codigo">
+                                    {{ pais.codigo }}
+                                </option>
+                            </select>
+                            <input
+                                id="telefono"
+                                type="tel"
+                                v-model="form.telefono"
+                                autocomplete="tel"
+                                placeholder="71234567"
+                                @input="handleInput('telefono')"
+                                class="flex-1 px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+                                :class="(form.errors.telefono || clientErrors.telefono) ? 'border-red-500 focus:ring-red-500' : ''"
+                                style="
+                                    background-color: var(--bg-secondary);
+                                    color: var(--text-primary);
+                                    border-color: var(--border-primary);
+                                "
+                            />
+                        </div>
                         <InputError class="mt-2" :message="clientErrors.telefono || form.errors.telefono" />
                     </div>
                 </div>

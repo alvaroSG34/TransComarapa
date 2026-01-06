@@ -14,7 +14,7 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'client.verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -85,8 +85,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/estadisticas', [\App\Http\Controllers\EstadisticaController::class, 'index'])->name('estadisticas.index');
     });
 
-    // Rutas para Cliente
-    Route::middleware(['can:isCliente'])->prefix('cliente')->name('cliente.')->group(function () {
+    // Rutas para Cliente (requiere email verificado)
+    Route::middleware(['can:isCliente', 'client.verified'])->prefix('cliente')->name('cliente.')->group(function () {
         // Boletos
         Route::get('/boletos/comprar', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarRutas'])->name('boletos.comprar');
         Route::get('/boletos/ruta/{rutaId}/viajes', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarViajes'])->name('boletos.viajes');
@@ -109,5 +109,8 @@ Route::middleware('auth')->group(function () {
 Route::get('/api/visitas/contador', [\App\Http\Controllers\VisitaController::class, 'obtenerContadorPorRuta'])->name('visitas.contador');
 Route::get('/api/visitas/total', [\App\Http\Controllers\VisitaController::class, 'obtenerContadorTotal'])->name('visitas.total');
 Route::post('/api/visitas/multiples', [\App\Http\Controllers\VisitaController::class, 'obtenerContadoresMultiples'])->name('visitas.multiples');
+
+// Webhook de Stripe (sin middleware de autenticación)
+Route::post('/stripe/webhook', [\App\Http\Controllers\StripeWebhookController::class, 'handleWebhook'])->name('stripe.webhook');
 
 require __DIR__.'/auth.php';

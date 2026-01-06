@@ -43,7 +43,7 @@ onMounted(() => {
 
         <!-- Login Card -->
         <div
-            class="relative z-10 w-full overflow-hidden bg-card px-8 py-10 shadow-2xl sm:max-w-md sm:rounded-2xl border border-border/50 backdrop-blur-sm"
+            class="relative z-10 w-full mx-auto overflow-hidden bg-card px-8 py-10 shadow-2xl sm:max-w-2xl sm:rounded-2xl border border-border/50 backdrop-blur-sm"
         >
             <slot />
         </div>

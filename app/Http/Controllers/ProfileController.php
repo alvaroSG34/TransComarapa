@@ -36,7 +36,6 @@ class ProfileController extends Controller
         $validated = $request->validated();
         
         // Convertir 'name' a 'nombre' y 'apellido' si es necesario
-        // O mantener la estructura actual si ya usas name directamente
         if (isset($validated['name'])) {
             $parts = explode(' ', $validated['name'], 2);
             $user->nombre = $parts[0] ?? '';
@@ -48,6 +47,23 @@ class ProfileController extends Controller
             if ($user->isDirty('correo')) {
                 $user->email_verified_at = null;
             }
+        }
+
+        // Actualizar campos internacionales
+        if (isset($validated['pais'])) {
+            $user->pais = $validated['pais'];
+        }
+
+        if (isset($validated['ci'])) {
+            $user->ci = $validated['ci'];
+        }
+
+        if (isset($validated['telefono'])) {
+            $user->telefono = $validated['telefono'];
+        }
+
+        if (isset($validated['codigo_pais_telefono'])) {
+            $user->codigo_pais_telefono = $validated['codigo_pais_telefono'];
         }
 
         // Manejar subida de imagen de perfil

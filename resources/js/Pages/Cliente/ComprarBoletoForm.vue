@@ -1,18 +1,23 @@
 <script setup>
 import ClienteLayout from '@/Layouts/ClienteLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import { ref, computed,  onMounted } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
 
 const props = defineProps({
     viaje: Object,
-    ruta: Object
+    ruta: Object,
+    qr_data: Object,
+    stripe_data: Object,
+    stripe_key: String,
 });
 
 const form = useForm({
     viaje_id: props.viaje?.id || '',
     asiento: '',
-    metodo_pago: 'QR' // Solo QR para clientes
+    metodo_pago: '',
+    moneda: 'BOB',
 });
 
 const asientosOcupados = ref([]);
@@ -21,8 +26,23 @@ const qrData = ref(null);
 const errorQr = ref(null);
 const reintentando = ref(false);
 
-// Cuando se carga el componente, obtener asientos ocupados
+// Stripe
+const stripe = ref(null);
+const elements = ref(null);
+const cardElement = ref(null);
+const procesandoStripe = ref(false);
+const errorStripe = ref(null);
+const mostrarFormularioStripe = ref(false);
+const clientSecret = ref(null);
+const estadoDebug = ref('Inicializando...');
+const montoBob = computed(() => parseFloat(props.viaje?.precio) || 0);
+const montoUsd = computed(() => (montoBob.value * 0.145).toFixed(2));
+
+// Inicializar Stripe
 onMounted(async () => {
+    console.log('🔵 [Stripe Debug] Componente montado');
+    console.log('🔵 [Stripe Debug] Props:', { viaje: props.viaje, stripe_key: props.stripe_key, stripe_data: props.stripe_data });
+    
     if (props.viaje?.id) {
         try {
             const response = await axios.get(route('cliente.boletos.asientos-ocupados', props.viaje.id));
@@ -31,6 +51,35 @@ onMounted(async () => {
             console.error('Error al cargar asientos ocupados:', error);
             asientosOcupados.value = [];
         }
+    }
+
+    // Inicializar Stripe si hay stripe_key
+    if (props.stripe_key) {
+        try {
+            console.log('🔵 [Stripe Debug] Cargando Stripe con key:', props.stripe_key.substring(0, 20) + '...');
+            stripe.value = await loadStripe(props.stripe_key);
+            console.log('✅ [Stripe Debug] Stripe cargado exitosamente');
+            estadoDebug.value = 'Stripe inicializado';
+        } catch (error) {
+            console.error('❌ [Stripe Debug] Error al cargar Stripe:', error);
+            estadoDebug.value = 'Error al cargar Stripe: ' + error.message;
+        }
+    } else {
+        console.warn('⚠️ [Stripe Debug] No hay stripe_key en props');
+        estadoDebug.value = 'Falta stripe_key';
+    }
+
+    // Si hay datos de QR desde el backend, mostrar modal
+    if (props.qr_data) {
+        qrData.value = props.qr_data;
+        mostrarModalQr.value = true;
+    }
+
+    // Si hay datos de Stripe desde el backend, mostrar formulario
+    if (props.stripe_data) {
+        clientSecret.value = props.stripe_data.client_secret;
+        mostrarFormularioStripe.value = true;
+        inicializarStripeElements();
     }
 });
 
@@ -50,28 +99,176 @@ const asientosDisponiblesArray = computed(() => {
     return asientos;
 });
 
-const submit = () => {
+const inicializarStripeElements = () => {
+    console.log('🔵 [Stripe Debug] Inicializando Stripe Elements...');
+    console.log('🔵 [Stripe Debug] stripe.value:', !!stripe.value, 'clientSecret.value:', !!clientSecret.value);
+    
+    if (!stripe.value || !clientSecret.value) {
+        console.warn('⚠️ [Stripe Debug] No se puede inicializar: falta stripe o clientSecret');
+        estadoDebug.value = 'Falta stripe o clientSecret';
+        return;
+    }
+
+    try {
+        const appearance = {
+            theme: 'stripe',
+            variables: {
+                colorPrimary: '#4f46e5',
+            },
+        };
+
+        console.log('🔵 [Stripe Debug] Creando elements con clientSecret:', clientSecret.value.substring(0, 20) + '...');
+        elements.value = stripe.value.elements({ clientSecret: clientSecret.value, appearance });
+        cardElement.value = elements.value.create('payment');
+        console.log('✅ [Stripe Debug] Elements creados');
+        
+        setTimeout(() => {
+            const cardContainer = document.querySelector('#card-element');
+            console.log('🔵 [Stripe Debug] Buscando contenedor #card-element:', !!cardContainer);
+            if (cardContainer) {
+                cardElement.value.mount('#card-element');
+                console.log('✅ [Stripe Debug] Card element montado');
+                estadoDebug.value = 'Formulario de tarjeta listo';
+            } else {
+                console.error('❌ [Stripe Debug] No se encontró #card-element en el DOM');
+                estadoDebug.value = 'Error: contenedor no encontrado';
+            }
+        }, 100);
+    } catch (error) {
+        console.error('❌ [Stripe Debug] Error al inicializar elements:', error);
+        estadoDebug.value = 'Error al crear formulario: ' + error.message;
+    }
+};
+
+const seleccionarMetodoPago = (metodo) => {
+    form.metodo_pago = metodo;
+    
+    if (metodo === 'Stripe') {
+        mostrarFormularioStripe.value = true;
+    } else {
+        mostrarFormularioStripe.value = false;
+        clientSecret.value = null;
+    }
+};
+
+const crearPaymentIntent = () => {
+    console.log('🔵 [Stripe Debug] Intentando crear PaymentIntent...');
+    console.log('🔵 [Stripe Debug] Form data:', { asiento: form.asiento, viaje_id: form.viaje_id, metodo_pago: form.metodo_pago, moneda: form.moneda });
+    
+    if (!form.asiento || !form.viaje_id || !form.metodo_pago || form.metodo_pago !== 'Stripe') {
+        console.warn('⚠️ [Stripe Debug] Datos incompletos para crear PaymentIntent');
+        estadoDebug.value = 'Faltan datos (asiento, viaje o método)';
+        return;
+    }
+
+    console.log('🔵 [Stripe Debug] Enviando POST a procesar-compra...');
+    procesandoStripe.value = true;
+    errorStripe.value = null;
+    estadoDebug.value = 'Creando PaymentIntent...';
+
     form.post(route('cliente.boletos.procesar-compra'), {
         preserveScroll: true,
+        preserveState: true,
         onSuccess: (page) => {
-            // Si hay datos de QR en las props, mostrar modal
-            if (page.props.qr_data) {
-                qrData.value = page.props.qr_data;
-                mostrarModalQr.value = true;
-                errorQr.value = null;
-            } else {
-                // Si no hay QR, redirigir al historial
+            console.log('✅ [Stripe Debug] POST exitoso. Props recibidos:', page.props);
+            if (page.props.stripe_data) {
+                console.log('🔵 [Stripe Debug] stripe_data recibido:', page.props.stripe_data);
+                clientSecret.value = page.props.stripe_data.client_secret;
+                estadoDebug.value = 'PaymentIntent creado, inicializando formulario...';
+                nextTick(() => {
+                    console.log('🔵 [Stripe Debug] Llamando a inicializarStripeElements en nextTick');
+                    inicializarStripeElements();
+                });
+            } else if (page.props.success) {
+                console.log('✅ [Stripe Debug] Success sin stripe_data, redirigiendo...');
                 router.visit(route('cliente.historial'));
+            } else {
+                console.warn('⚠️ [Stripe Debug] Respuesta exitosa pero sin stripe_data ni success');
+                estadoDebug.value = 'Respuesta incompleta del servidor';
             }
+            procesandoStripe.value = false;
         },
         onError: (errors) => {
-            // Si hay error específico de QR, mostrar en modal
-            if (errors.qr_error) {
-                errorQr.value = errors.qr_error;
-                mostrarModalQr.value = true;
-            }
+            console.error('❌ [Stripe Debug] Error en POST:', errors);
+            errorStripe.value = errors.stripe_error || 'Error al inicializar el pago';
+            estadoDebug.value = 'Error: ' + (errors.stripe_error || 'Error desconocido');
+            procesandoStripe.value = false;
+        },
+        onFinish: () => {
+            console.log('🔵 [Stripe Debug] POST finalizado');
+            procesandoStripe.value = false;
         }
     });
+};
+
+// NO crear PaymentIntent automáticamente - esperar a que el usuario haga clic en el botón
+// El formulario de Stripe se mostrará después de crear el PaymentIntent
+
+const submit = () => {
+    if (form.metodo_pago === 'Stripe') {
+        // Si aún no hay clientSecret, crear el PaymentIntent primero
+        if (!clientSecret.value) {
+            crearPaymentIntent();
+        } else {
+            // Si ya existe el clientSecret, procesar el pago
+            procesarPagoStripe();
+        }
+    } else {
+        form.post(route('cliente.boletos.procesar-compra'), {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                if (page.props.qr_data) {
+                    qrData.value = page.props.qr_data;
+                    mostrarModalQr.value = true;
+                    errorQr.value = null;
+                } else {
+                    router.visit(route('cliente.historial'));
+                }
+            },
+            onError: (errors) => {
+                if (errors.qr_error) {
+                    errorQr.value = errors.qr_error;
+                    mostrarModalQr.value = true;
+                }
+            }
+        });
+    }
+};
+
+const procesarPagoStripe = async () => {
+    if (!stripe.value || !clientSecret.value) {
+        errorStripe.value = 'Por favor espere mientras se inicializa el formulario de pago';
+        return;
+    }
+
+    procesandoStripe.value = true;
+    errorStripe.value = null;
+
+    try {
+        const { error, paymentIntent } = await stripe.value.confirmPayment({
+            elements: elements.value,
+            redirect: 'if_required',
+        });
+
+        if (error) {
+            errorStripe.value = error.message;
+            procesandoStripe.value = false;
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+            // Pago exitoso - redirigir al historial
+            router.visit(route('cliente.historial'), {
+                onSuccess: () => {
+                    alert('¡Pago procesado exitosamente!');
+                }
+            });
+        } else {
+            errorStripe.value = 'Estado de pago inesperado: ' + (paymentIntent?.status || 'desconocido');
+            procesandoStripe.value = false;
+        }
+    } catch (err) {
+        console.error('Error al confirmar pago:', err);
+        errorStripe.value = 'Error al procesar el pago. Intente nuevamente.';
+        procesandoStripe.value = false;
+    }
 };
 
 const reintentarGenerarQr = async () => {
@@ -267,28 +464,148 @@ const formatearFecha = (fecha) => {
                         </p>
                     </div>
 
-                    <!-- Método de Pago (Solo QR para clientes) -->
+                    <!-- Método de Pago -->
                     <div>
-                        <label class="block text-sm font-medium mb-2" style="color: var(--text-primary)">
-                            Método de Pago
+                        <label class="block text-sm font-medium mb-4" style="color: var(--text-primary)">
+                            Método de Pago *
                         </label>
-                        <div class="p-4 rounded-lg" style="background-color: var(--header-bg); border: 1px solid var(--border-color)">
-                            <div class="flex items-center gap-3">
-                                <div class="text-3xl">📱</div>
-                                <div>
-                                    <div class="font-semibold" style="color: var(--text-primary)">
-                                        Pago con QR (PagoFácil)
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Botón Pago QR -->
+                            <button
+                                type="button"
+                                @click="seleccionarMetodoPago('QR')"
+                                class="group relative p-6 rounded-xl border-2 transition-all duration-200 hover:shadow-lg"
+                                :class="{
+                                    'border-blue-500 bg-blue-50': form.metodo_pago === 'QR',
+                                    'border-gray-200 hover:border-gray-300': form.metodo_pago !== 'QR'
+                                }"
+                            >
+                                <div class="flex items-center gap-4">
+                                    <div class="text-5xl">🏦</div>
+                                    <div class="text-left flex-1">
+                                        <div class="font-bold text-lg mb-1" style="color: var(--text-primary)">
+                                            Pago QR
+                                        </div>
+                                        <div class="text-sm" style="color: var(--text-secondary)">
+                                            PagoFácil - Escanea con tu app
+                                        </div>
                                     </div>
-                                    <div class="text-sm" style="color: var(--text-secondary)">
-                                        Escanea el código QR que se generará para realizar el pago de forma segura
+                                    <div v-if="form.metodo_pago === 'QR'" class="text-blue-500">
+                                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
                                     </div>
                                 </div>
-                            </div>
+                            </button>
+
+                            <!-- Botón Pago Stripe -->
+                            <button
+                                type="button"
+                                @click="seleccionarMetodoPago('Stripe')"
+                                class="group relative p-6 rounded-xl border-2 transition-all duration-200 hover:shadow-lg"
+                                :class="{
+                                    'border-blue-500 bg-blue-50': form.metodo_pago === 'Stripe',
+                                    'border-gray-200 hover:border-gray-300': form.metodo_pago !== 'Stripe'
+                                }"
+                            >
+                                <div class="flex items-center gap-4">
+                                    <div class="text-5xl">💳</div>
+                                    <div class="text-left flex-1">
+                                        <div class="font-bold text-lg mb-1" style="color: var(--text-primary)">
+                                            Tarjeta
+                                        </div>
+                                        <div class="text-sm" style="color: var(--text-secondary)">
+                                            Visa, Mastercard, Amex
+                                        </div>
+                                    </div>
+                                    <div v-if="form.metodo_pago === 'Stripe'" class="text-blue-500">
+                                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </button>
                         </div>
-                        <input type="hidden" v-model="form.metodo_pago" value="QR" />
-                        <p v-if="form.errors.metodo_pago" class="mt-1 text-sm text-red-600">
+
+                        <p v-if="form.errors.metodo_pago" class="mt-2 text-sm text-red-600">
                             {{ form.errors.metodo_pago }}
                         </p>
+                    </div>
+
+                    <!-- Selector de Moneda (solo para Stripe) -->
+                    <div v-if="form.metodo_pago === 'Stripe'" class="space-y-3">
+                        <label class="block text-sm font-medium" style="color: var(--text-primary)">
+                            Moneda de Pago *
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                @click="form.moneda = 'BOB'"
+                                class="p-4 rounded-lg border-2 transition-all"
+                                :class="{
+                                    'border-blue-500 bg-blue-50': form.moneda === 'BOB',
+                                    'border-gray-200 hover:border-gray-300': form.moneda !== 'BOB'
+                                }"
+                            >
+                                <div class="font-semibold" style="color: var(--text-primary)">BOB (Bolivianos)</div>
+                                <div class="text-2xl font-bold text-green-600 mt-1">
+                                    Bs {{ montoBob.toFixed(2) }}
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                @click="form.moneda = 'USD'"
+                                class="p-4 rounded-lg border-2 transition-all"
+                                :class="{
+                                    'border-blue-500 bg-blue-50': form.moneda === 'USD',
+                                    'border-gray-200 hover:border-gray-300': form.moneda !== 'USD'
+                                }"
+                            >
+                                <div class="font-semibold" style="color: var(--text-primary)">USD (Dólares)</div>
+                                <div class="text-2xl font-bold text-green-600 mt-1">
+                                    $ {{ montoUsd }}
+                                </div>
+                            </button>
+                        </div>
+                        <p class="text-xs italic" style="color: var(--text-secondary)">
+                            Tasa de conversión: 1 USD = 6.90 BOB aprox.
+                        </p>
+                    </div>
+
+                    <!-- Panel de Depuración (solo en desarrollo) -->
+                    <div v-if="form.metodo_pago === 'Stripe'" class="p-4 rounded-lg border-2 border-yellow-400 bg-yellow-50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lg">🔍</span>
+                            <h4 class="font-semibold text-yellow-800">Estado de Stripe (Debug)</h4>
+                        </div>
+                        <div class="space-y-1 text-xs font-mono text-yellow-900">
+                            <div><strong>Estado:</strong> {{ estadoDebug }}</div>
+                            <div><strong>Stripe inicializado:</strong> {{ !!stripe ? '✅ Sí' : '❌ No' }}</div>
+                            <div><strong>ClientSecret:</strong> {{ clientSecret ? '✅ Sí (' + clientSecret.substring(0, 20) + '...)' : '❌ No' }}</div>
+                            <div><strong>Elements creado:</strong> {{ !!elements ? '✅ Sí' : '❌ No' }}</div>
+                            <div><strong>Card montado:</strong> {{ !!cardElement ? '✅ Sí' : '❌ No' }}</div>
+                            <div><strong>Procesando:</strong> {{ procesandoStripe ? '⏳ Sí' : '❌ No' }}</div>
+                            <div><strong>Asiento:</strong> {{ form.asiento || '❌ No seleccionado' }}</div>
+                            <div><strong>Moneda:</strong> {{ form.moneda }}</div>
+                            <div v-if="errorStripe" class="text-red-600"><strong>Error:</strong> {{ errorStripe }}</div>
+                        </div>
+                        <div class="mt-2 text-xs text-yellow-700">
+                            💡 Abre la consola (F12) para ver logs detallados
+                        </div>
+                    </div>
+
+                    <!-- Formulario de Stripe (solo si seleccionó Stripe y ya hay PaymentIntent) -->
+                    <div v-if="mostrarFormularioStripe && clientSecret" class="space-y-4">
+                        <div class="p-6 rounded-lg border" style="background-color: var(--card-bg); border-color: var(--border-color)">
+                            <h3 class="text-lg font-semibold mb-4" style="color: var(--text-primary)">
+                                Información de Tarjeta
+                            </h3>
+                            <div id="card-element" class="p-4 rounded-lg border" style="background-color: white;"></div>
+                            <p v-if="errorStripe" class="mt-2 text-sm text-red-600">
+                                {{ errorStripe }}
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Resumen de la Compra -->
@@ -312,7 +629,13 @@ const formatearFecha = (fecha) => {
                             <div class="flex justify-between">
                                 <span style="color: var(--text-secondary)">Método de Pago:</span>
                                 <span class="font-medium" style="color: var(--text-primary)">
-                                    QR (PagoFácil)
+                                    {{ form.metodo_pago === 'QR' ? 'QR (PagoFácil)' : form.metodo_pago === 'Stripe' ? 'Tarjeta (Stripe)' : 'No seleccionado' }}
+                                </span>
+                            </div>
+                            <div v-if="form.metodo_pago === 'Stripe'" class="flex justify-between">
+                                <span style="color: var(--text-secondary)">Moneda:</span>
+                                <span class="font-medium" style="color: var(--text-primary)">
+                                    {{ form.moneda === 'BOB' ? `Bs ${montoBob.toFixed(2)}` : `$ ${montoUsd}` }}
                                 </span>
                             </div>
                             <div class="flex justify-between pt-2 border-t" style="border-color: var(--border-color)">
@@ -335,12 +658,12 @@ const formatearFecha = (fecha) => {
                         </Link>
                         <button
                             type="submit"
-                            :disabled="form.processing || !form.asiento"
+                            :disabled="form.processing || !form.asiento || !form.metodo_pago || procesandoStripe"
                             class="px-6 py-2 rounded-md text-sm font-medium text-white transition-all duration-200 hover:scale-105"
-                            style="background: linear-gradient(135deg, var(--primary-600), var(--primary-500));"
-                            :class="{ 'opacity-50 cursor-not-allowed': form.processing || !form.asiento }"
+                            style="background: linear-gradient(135deg, var(--primary-600), var(--primary-500));" con Stripe
+                            :class="{ 'opacity-50 cursor-not-allowed': form.processing || !form.asiento || !form.metodo_pago || procesandoStripe }"
                         >
-                            {{ form.processing ? 'Procesando...' : 'Confirmar Compra' }}
+                            {{ procesandoStripe ? 'Procesando pago...' : form.processing ? 'Procesando...' : form.metodo_pago === 'Stripe' ? (clientSecret ? 'Pagar con Tarjeta' : 'Continuar') : 'Confirmar Compra' }}
                         </button>
                     </div>
                 </form>

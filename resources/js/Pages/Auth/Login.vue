@@ -37,7 +37,7 @@ const submit = () => {
     <GuestLayout>
         <Head title="Iniciar Sesión" />
 
-        <div class="w-full max-w-md space-y-8">
+        <div class="w-full space-y-8">
             <!-- Header -->
             <div class="text-center">
                 <h1 class="text-3xl font-bold tracking-tight text-foreground">

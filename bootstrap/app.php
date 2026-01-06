@@ -19,7 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // Excluir webhook de Stripe de la verificación CSRF
+        $middleware->validateCsrfTokens(except: [
+            'stripe/*',
+        ]);
+
+        // Registrar alias de middleware personalizado para verificación de email de clientes
+        $middleware->alias([
+            'client.verified' => \App\Http\Middleware\EnsureClientEmailIsVerified::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

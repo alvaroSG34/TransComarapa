@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Events\PagoVentaCreated;
+use App\Events\PagoVentaUpdated;
 
 class PagoVenta extends Model
 {
@@ -21,6 +23,17 @@ class PagoVenta extends Model
         'transaction_id',
         'payment_method_transaction_id',
         'estado_pago',
+        'payment_intent_id',
+        'payment_method_id',
+        'stripe_session_id',
+        'moneda',
+        'monto_usd',
+    ];
+
+    // Disparar eventos automáticamente
+    protected $dispatchesEvents = [
+        'created' => PagoVentaCreated::class,
+        'updated' => PagoVentaUpdated::class,
     ];
 
     protected function casts(): array

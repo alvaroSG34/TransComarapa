@@ -7,6 +7,7 @@ use App\Repositories\Contracts\ViajeRepositoryInterface;
 use App\Services\VentaService;
 use App\Services\PagoService;
 use App\Services\PagoFacilService;
+use App\Services\StripeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,19 +20,22 @@ class ClienteBoletoController extends Controller
     protected $ventaService;
     protected $pagoService;
     protected $pagoFacilService;
+    protected $stripeService;
 
     public function __construct(
         RutaRepositoryInterface $rutaRepository,
         ViajeRepositoryInterface $viajeRepository,
         VentaService $ventaService,
         PagoService $pagoService,
-        PagoFacilService $pagoFacilService
+        PagoFacilService $pagoFacilService,
+        StripeService $stripeService
     ) {
         $this->rutaRepository = $rutaRepository;
         $this->viajeRepository = $viajeRepository;
         $this->ventaService = $ventaService;
         $this->pagoService = $pagoService;
         $this->pagoFacilService = $pagoFacilService;
+        $this->stripeService = $stripeService;
     }
 
     /**
@@ -164,7 +168,8 @@ class ClienteBoletoController extends Controller
 
         return Inertia::render('Cliente/ComprarBoletoForm', [
             'ruta' => $ruta,
-            'viaje' => $viaje
+            'viaje' => $viaje,
+            'stripe_key' => config('services.stripe.key'),
         ]);
     }
 
@@ -199,7 +204,8 @@ class ClienteBoletoController extends Controller
         $validated = $request->validate([
             'viaje_id' => 'required|exists:viajes,id',
             'asiento' => 'required|integer|min:1',
-            'metodo_pago' => 'required|in:QR', // Solo QR para clientes
+            'metodo_pago' => 'required|in:QR,Stripe',
+            'moneda' => 'required_if:metodo_pago,Stripe|in:BOB,USD',
         ]);
 
         // Obtener el usuario autenticado (cliente)
@@ -270,8 +276,10 @@ class ClienteBoletoController extends Controller
 
                 $venta = $this->ventaService->crearVentaBoleto($ventaData);
 
-                // Si el método de pago es QR, generar QR
+                // Datos de pago según método
                 $qrData = null;
+                $stripeData = null;
+
                 if ($validated['metodo_pago'] === 'QR') {
                     try {
                         // Crear PagoVenta usando el servicio
@@ -311,9 +319,50 @@ class ClienteBoletoController extends Controller
                             'qr_error' => 'Error al generar el código QR: ' . $e->getMessage() . '. Por favor, intente nuevamente.'
                         ])->withInput();
                     }
-                } else {
-                    // Si es efectivo, marcar como pagado
-                    $venta->update(['estado_pago' => 'Pagado']);
+                } elseif ($validated['metodo_pago'] === 'Stripe') {
+                    try {
+                        // Crear PagoVenta para Stripe
+                        $pagoVenta = $this->pagoService->crearPago([
+                            'venta_id' => $venta->id,
+                            'num_cuota' => 1,
+                            'monto' => $venta->monto_total,
+                            'metodo_pago' => 'Stripe',
+                            'estado_pago' => 'Pendiente',
+                            'moneda' => $validated['moneda'] ?? 'BOB',
+                        ]);
+
+                        // Crear PaymentIntent
+                        $moneda = $validated['moneda'] ?? 'BOB';
+                        $resultadoStripe = $this->stripeService->crearPaymentIntent($pagoVenta, $moneda);
+
+                        if (!$resultadoStripe['success']) {
+                            throw new \Exception('Error al crear PaymentIntent: ' . ($resultadoStripe['error'] ?? 'Error desconocido'));
+                        }
+
+                        // Preparar datos de Stripe para la vista
+                        $stripeData = [
+                            'client_secret' => $resultadoStripe['client_secret'],
+                            'payment_intent_id' => $resultadoStripe['payment_intent']->id,
+                            'amount' => $resultadoStripe['payment_intent']->amount,
+                            'currency' => $resultadoStripe['payment_intent']->currency,
+                            'boleto_id' => $venta->boletos->first()->id,
+                        ];
+
+                        Log::info('PaymentIntent creado exitosamente para cliente', [
+                            'venta_id' => $venta->id,
+                            'pago_venta_id' => $pagoVenta->id,
+                            'payment_intent_id' => $resultadoStripe['payment_intent']->id,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Error al crear PaymentIntent para cliente', [
+                            'venta_id' => $venta->id ?? null,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        return back()->withErrors([
+                            'stripe_error' => 'Error al inicializar pago con Stripe: ' . $e->getMessage() . '. Por favor, intente nuevamente.'
+                        ])->withInput();
+                    }
                 }
 
                 // Obtener datos del viaje y ruta para re-renderizar
@@ -350,6 +399,8 @@ class ClienteBoletoController extends Controller
                     'ruta' => $ruta,
                     'viaje' => $viajeData,
                     'qr_data' => $qrData,
+                    'stripe_data' => $stripeData,
+                    'stripe_key' => config('services.stripe.key'),
                     'success' => 'Boleto comprado exitosamente!'
                 ]);
             } catch (\Exception $e) {

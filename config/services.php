@@ -43,4 +43,12 @@ return [
         'callback_url' => env('PAGOFACIL_CALLBACK_URL', 'https://tu-dominio.com/api/pagofacil/callback'),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'currency' => env('STRIPE_CURRENCY', 'USD'),
+        'bob_to_usd_rate' => env('STRIPE_BOB_TO_USD_RATE', 0.145),
+    ],
+
 ];

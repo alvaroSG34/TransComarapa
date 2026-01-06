@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { PAISES } from '@/utils/paises.js';
 
 defineProps({
     mustVerifyEmail: {
@@ -36,6 +37,10 @@ const userEmail = computed(() => {
 const form = useForm({
     name: userName.value,
     email: userEmail.value,
+    pais: user?.pais || 'Bolivia',
+    ci: user?.ci || '',
+    telefono: user?.telefono || '',
+    codigo_pais_telefono: user?.codigo_pais_telefono || '+591',
     avatar: null,
 });
 
@@ -81,6 +86,10 @@ const submit = () => {
         const formData = new FormData();
         formData.append('name', data.name || '');
         formData.append('email', data.email || '');
+        formData.append('pais', data.pais || '');
+        formData.append('ci', data.ci || '');
+        formData.append('telefono', data.telefono || '');
+        formData.append('codigo_pais_telefono', data.codigo_pais_telefono || '');
         if (data.avatar) {
             formData.append('avatar', data.avatar);
         }
@@ -102,11 +111,11 @@ const submit = () => {
     <section>
         <header>
             <h2 class="text-lg font-medium text-gray-900">
-                Profile Information
+                Información del Perfil
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Update your account's profile information and email address.
+                Actualiza la información de tu cuenta y dirección de correo electrónico.
             </p>
         </header>
 
@@ -114,8 +123,9 @@ const submit = () => {
             @submit.prevent="submit"
             class="mt-6 space-y-6"
         >
+            <!-- Nombre Completo -->
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="Nombre Completo" />
 
                 <TextInput
                     id="name"
@@ -130,8 +140,9 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.name" />
             </div>
 
+            <!-- Email -->
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Correo Electrónico" />
 
                 <TextInput
                     id="email"
@@ -143,6 +154,71 @@ const submit = () => {
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <!-- País -->
+            <div>
+                <InputLabel for="pais" value="País" />
+
+                <select
+                    id="pais"
+                    v-model="form.pais"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                >
+                    <option value="">Selecciona un país</option>
+                    <option v-for="pais in PAISES" :key="pais.iso" :value="pais.nombre">
+                        {{ pais.nombre }}
+                    </option>
+                </select>
+
+                <InputError class="mt-2" :message="form.errors.pais" />
+            </div>
+
+            <!-- Documento de Identidad -->
+            <div>
+                <InputLabel for="ci" value="Documento de Identidad / Pasaporte" />
+
+                <TextInput
+                    id="ci"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.ci"
+                    autocomplete="off"
+                    placeholder="CI, DNI, Pasaporte, etc."
+                />
+
+                <InputError class="mt-2" :message="form.errors.ci" />
+                <p class="mt-1 text-xs text-gray-500">
+                    Cédula de Identidad, DNI, Pasaporte u otro documento según tu país
+                </p>
+            </div>
+
+            <!-- Teléfono con Código de País -->
+            <div>
+                <InputLabel for="telefono" value="Teléfono" />
+
+                <div class="mt-1 flex gap-2">
+                    <select
+                        v-model="form.codigo_pais_telefono"
+                        class="w-32 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                    >
+                        <option v-for="pais in PAISES" :key="pais.codigo" :value="pais.codigo">
+                            {{ pais.codigo }} {{ pais.iso }}
+                        </option>
+                    </select>
+
+                    <TextInput
+                        id="telefono"
+                        type="tel"
+                        class="flex-1"
+                        v-model="form.telefono"
+                        autocomplete="tel"
+                        placeholder="70123456"
+                    />
+                </div>
+
+                <InputError class="mt-2" :message="form.errors.telefono" />
+                <InputError class="mt-2" :message="form.errors.codigo_pais_telefono" />
             </div>
 
             <!-- Avatar Upload -->
@@ -192,16 +268,17 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.avatar" />
             </div>
 
-            <div v-if="mustVerifyEmail && user.email_verified_at === null">
-                <p class="mt-2 text-sm text-gray-800">
-                    Your email address is unverified.
+            <!-- Verificación de Email para Clientes -->
+            <div v-if="mustVerifyEmail && user.email_verified_at === null" class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                <p class="text-sm text-yellow-800">
+                    Tu dirección de correo electrónico no está verificada.
                     <Link
                         :href="route('verification.send')"
                         method="post"
                         as="button"
-                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        class="rounded-md text-sm text-yellow-900 underline hover:text-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
                     >
-                        Click here to re-send the verification email.
+                        Haz clic aquí para reenviar el correo de verificación.
                     </Link>
                 </p>
 
@@ -209,12 +286,12 @@ const submit = () => {
                     v-show="status === 'verification-link-sent'"
                     class="mt-2 text-sm font-medium text-green-600"
                 >
-                    A new verification link has been sent to your email address.
+                    Se ha enviado un nuevo enlace de verificación a tu correo electrónico.
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
+                <PrimaryButton :disabled="form.processing">Guardar</PrimaryButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -226,7 +303,7 @@ const submit = () => {
                         v-if="form.recentlySuccessful"
                         class="text-sm text-gray-600"
                     >
-                        Saved.
+                        Guardado.
                     </p>
                 </Transition>
             </div>
