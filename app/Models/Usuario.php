@@ -26,6 +26,7 @@ class Usuario extends Authenticatable implements MustVerifyEmail
         'nombre',
         'apellido',
         'pais',
+        'moneda',
         'ci',
         'telefono',
         'codigo_pais_telefono',

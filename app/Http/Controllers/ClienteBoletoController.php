@@ -205,7 +205,6 @@ class ClienteBoletoController extends Controller
             'viaje_id' => 'required|exists:viajes,id',
             'asiento' => 'required|integer|min:1',
             'metodo_pago' => 'required|in:QR,Stripe',
-            'moneda' => 'required_if:metodo_pago,Stripe|in:BOB,USD',
         ]);
 
         // Obtener el usuario autenticado (cliente)
@@ -321,6 +320,9 @@ class ClienteBoletoController extends Controller
                     }
                 } elseif ($validated['metodo_pago'] === 'Stripe') {
                     try {
+                        // Usar la moneda del usuario
+                        $moneda = $cliente->moneda ?? 'USD';
+                        
                         // Crear PagoVenta para Stripe
                         $pagoVenta = $this->pagoService->crearPago([
                             'venta_id' => $venta->id,
@@ -328,11 +330,10 @@ class ClienteBoletoController extends Controller
                             'monto' => $venta->monto_total,
                             'metodo_pago' => 'Stripe',
                             'estado_pago' => 'Pendiente',
-                            'moneda' => $validated['moneda'] ?? 'BOB',
+                            'moneda' => $moneda,
                         ]);
 
                         // Crear PaymentIntent
-                        $moneda = $validated['moneda'] ?? 'BOB';
                         $resultadoStripe = $this->stripeService->crearPaymentIntent($pagoVenta, $moneda);
 
                         if (!$resultadoStripe['success']) {

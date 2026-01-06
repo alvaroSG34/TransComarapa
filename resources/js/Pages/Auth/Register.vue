@@ -234,7 +234,7 @@ const handleInput = (field) => {
                         v-model="form.email"
                         autocomplete="username"
                         placeholder="correo@ejemplo.com"
-                        @input="handleInput('email')"
+                        @input="(e) => { form.email = e.target.value.toLowerCase(); handleInput('email'); }"
                         class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
                         :class="(form.errors.email || clientErrors.email) ? 'border-red-500 focus:ring-red-500' : ''"
                         style="

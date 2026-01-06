@@ -15,6 +15,54 @@ use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
+    // Mapeo de países a monedas soportadas por Stripe
+    private const MONEDAS_POR_PAIS = [
+        'Bolivia' => 'BOB',
+        'Argentina' => 'ARS',
+        'Australia' => 'AUD',
+        'Brasil' => 'BRL',
+        'Canadá' => 'CAD',
+        'Chile' => 'CLP',
+        'China' => 'CNY',
+        'Colombia' => 'COP',
+        'Corea del Sur' => 'KRW',
+        'Costa Rica' => 'CRC',
+        'Dinamarca' => 'DKK',
+        'España' => 'EUR',
+        'Estados Unidos' => 'USD',
+        'Francia' => 'EUR',
+        'Alemania' => 'EUR',
+        'Austria' => 'EUR',
+        'Bélgica' => 'EUR',
+        'Italia' => 'EUR',
+        'Portugal' => 'EUR',
+        'Andorra' => 'EUR',
+        'Guatemala' => 'GTQ',
+        'Honduras' => 'HNL',
+        'India' => 'INR',
+        'Japón' => 'JPY',
+        'México' => 'MXN',
+        'Nicaragua' => 'NIO',
+        'Noruega' => 'NOK',
+        'Paraguay' => 'PYG',
+        'Perú' => 'PEN',
+        'Reino Unido' => 'GBP',
+        'República Dominicana' => 'DOP',
+        'Rumania' => 'RON',
+        'Rusia' => 'RUB',
+        'Suecia' => 'SEK',
+        'Suiza' => 'CHF',
+        'Uruguay' => 'UYU',
+    ];
+
+    /**
+     * Obtener moneda basada en el país
+     */
+    private function obtenerMonedaPorPais(string $pais): string
+    {
+        return self::MONEDAS_POR_PAIS[$pais] ?? 'USD'; // Default USD
+    }
+
     /**
      * Display the registration view.
      */
@@ -41,10 +89,14 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
         
+        // Determinar moneda basada en el país
+        $moneda = $this->obtenerMonedaPorPais($request->pais);
+        
         $user = Usuario::create([
             'nombre' => $request->nombre,
             'apellido' => $request->apellido,
             'pais' => $request->pais,
+            'moneda' => $moneda,
             'ci' => $request->ci,
             'codigo_pais_telefono' => $request->codigo_pais_telefono,
             'telefono' => $request->telefono,

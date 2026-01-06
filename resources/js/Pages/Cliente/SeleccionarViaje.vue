@@ -1,11 +1,50 @@
 <script setup>
 import ClienteLayout from '@/Layouts/ClienteLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps({
     ruta: Object,
     viajes: Array
+});
+
+const page = usePage();
+
+// Obtener moneda y símbolo del usuario autenticado
+const monedaUsuario = computed(() => page.props.auth?.user?.moneda || 'BOB');
+const simboloMoneda = computed(() => {
+    const simbolos = {
+        'BOB': 'Bs',
+        'USD': '$',
+        'EUR': '€',
+        'ARS': '$',
+        'AUD': '$',
+        'BRL': 'R$',
+        'CAD': '$',
+        'CLP': '$',
+        'CNY': '¥',
+        'COP': '$',
+        'CRC': '₡',
+        'DKK': 'kr',
+        'GBP': '£',
+        'GTQ': 'Q',
+        'HNL': 'L',
+        'INR': '₹',
+        'JPY': '¥',
+        'KRW': '₩',
+        'MXN': '$',
+        'NIO': 'C$',
+        'NOK': 'kr',
+        'PEN': 'S/',
+        'PYG': '₲',
+        'RON': 'lei',
+        'RUB': '₽',
+        'SEK': 'kr',
+        'CHF': 'Fr',
+        'UYU': '$',
+        'DOP': '$',
+    };
+    return simbolos[monedaUsuario.value] || '$';
 });
 
 const formatearFecha = (fecha) => {
@@ -99,7 +138,7 @@ const formatearFechaCorta = (fecha) => {
                                     </div>
                                     <div class="px-3 py-1 rounded-full text-xs font-semibold"
                                          style="background-color: var(--accent-100); color: var(--accent-700)">
-                                        Bs {{ parseFloat(viaje.precio).toFixed(2) }}
+                                        {{ simboloMoneda }} {{ parseFloat(viaje.precio).toFixed(2) }}
                                     </div>
                                 </div>
                                 

@@ -6,6 +6,7 @@ import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 
 const props = defineProps({
+    auth: Object,
     viaje: Object,
     ruta: Object,
     qr_data: Object,
@@ -17,7 +18,6 @@ const form = useForm({
     viaje_id: props.viaje?.id || '',
     asiento: '',
     metodo_pago: '',
-    moneda: 'BOB',
 });
 
 const asientosOcupados = ref([]);
@@ -37,6 +37,52 @@ const clientSecret = ref(null);
 const estadoDebug = ref('Inicializando...');
 const montoBob = computed(() => parseFloat(props.viaje?.precio) || 0);
 const montoUsd = computed(() => (montoBob.value * 0.145).toFixed(2));
+
+// Información de la moneda del usuario desde $page.props.auth.user
+const monedaUsuario = computed(() => {
+    const user = props.auth?.user;
+    return user?.moneda || 'BOB';
+});
+
+const simboloMoneda = computed(() => {
+    const simbolos = {
+        'BOB': 'Bs',
+        'USD': '$',
+        'EUR': '€',
+        'ARS': '$',
+        'AUD': '$',
+        'BRL': 'R$',
+        'CAD': '$',
+        'CLP': '$',
+        'CNY': '¥',
+        'COP': '$',
+        'CRC': '₡',
+        'DKK': 'kr',
+        'GBP': '£',
+        'GTQ': 'Q',
+        'HNL': 'L',
+        'INR': '₹',
+        'JPY': '¥',
+        'KRW': '₩',
+        'MXN': '$',
+        'NIO': 'C$',
+        'NOK': 'kr',
+        'PEN': 'S/',
+        'PYG': '₲',
+        'RON': 'lei',
+        'RUB': '₽',
+        'SEK': 'kr',
+        'CHF': 'Fr',
+        'UYU': '$',
+        'DOP': '$',
+    };
+    return simbolos[monedaUsuario.value] || '$';
+});
+
+const paisUsuario = computed(() => {
+    const user = props.auth?.user;
+    return user?.pais || 'Bolivia';
+});
 
 // Inicializar Stripe
 onMounted(async () => {
@@ -394,7 +440,7 @@ const formatearFecha = (fecha) => {
                     <div>
                         <span style="color: var(--text-secondary)">Precio:</span>
                         <span class="ml-2 font-bold text-lg text-green-600">
-                            Bs {{ parseFloat(viaje?.precio).toFixed(2) }}
+                            {{ simboloMoneda }} {{ parseFloat(viaje?.precio).toFixed(2) }}
                         </span>
                     </div>
                     <div>
@@ -533,43 +579,34 @@ const formatearFecha = (fecha) => {
                         </p>
                     </div>
 
-                    <!-- Selector de Moneda (solo para Stripe) -->
-                    <div v-if="form.metodo_pago === 'Stripe'" class="space-y-3">
-                        <label class="block text-sm font-medium" style="color: var(--text-primary)">
-                            Moneda de Pago *
-                        </label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <button
-                                type="button"
-                                @click="form.moneda = 'BOB'"
-                                class="p-4 rounded-lg border-2 transition-all"
-                                :class="{
-                                    'border-blue-500 bg-blue-50': form.moneda === 'BOB',
-                                    'border-gray-200 hover:border-gray-300': form.moneda !== 'BOB'
-                                }"
-                            >
-                                <div class="font-semibold" style="color: var(--text-primary)">BOB (Bolivianos)</div>
-                                <div class="text-2xl font-bold text-green-600 mt-1">
-                                    Bs {{ montoBob.toFixed(2) }}
-                                </div>
-                            </button>
-                            <button
-                                type="button"
-                                @click="form.moneda = 'USD'"
-                                class="p-4 rounded-lg border-2 transition-all"
-                                :class="{
-                                    'border-blue-500 bg-blue-50': form.moneda === 'USD',
-                                    'border-gray-200 hover:border-gray-300': form.moneda !== 'USD'
-                                }"
-                            >
-                                <div class="font-semibold" style="color: var(--text-primary)">USD (Dólares)</div>
-                                <div class="text-2xl font-bold text-green-600 mt-1">
-                                    $ {{ montoUsd }}
-                                </div>
-                            </button>
+                    <!-- Información de Moneda (solo para Stripe) -->
+                    <div v-if="form.metodo_pago === 'Stripe'" class="p-6 rounded-lg border-2 border-blue-200 bg-blue-50">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="text-3xl">💳</div>
+                            <div>
+                                <h3 class="font-semibold text-lg" style="color: var(--text-primary)">Información de Pago</h3>
+                                <p class="text-sm" style="color: var(--text-secondary)">Tu moneda basada en tu país de registro</p>
+                            </div>
                         </div>
-                        <p class="text-xs italic" style="color: var(--text-secondary)">
-                            Tasa de conversión: 1 USD = 6.90 BOB aprox.
+                        <div class="bg-white rounded-lg p-4 border border-blue-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium" style="color: var(--text-secondary)">País:</span>
+                                <span class="font-semibold" style="color: var(--text-primary)">{{ paisUsuario }}</span>
+                            </div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium" style="color: var(--text-secondary)">Moneda:</span>
+                                <span class="font-semibold" style="color: var(--text-primary)">{{ monedaUsuario }}</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-2 border-t border-blue-200">
+                                <span class="text-base font-medium" style="color: var(--text-secondary)">Total a Pagar:</span>
+                                <span class="text-2xl font-bold text-green-600">{{ simboloMoneda }} {{ montoBob.toFixed(2) }}</span>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs italic text-blue-700 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                            <span>La moneda se determinó automáticamente según tu país de registro</span>
                         </p>
                     </div>
 
@@ -587,7 +624,8 @@ const formatearFecha = (fecha) => {
                             <div><strong>Card montado:</strong> {{ !!cardElement ? '✅ Sí' : '❌ No' }}</div>
                             <div><strong>Procesando:</strong> {{ procesandoStripe ? '⏳ Sí' : '❌ No' }}</div>
                             <div><strong>Asiento:</strong> {{ form.asiento || '❌ No seleccionado' }}</div>
-                            <div><strong>Moneda:</strong> {{ form.moneda }}</div>
+                            <div><strong>País:</strong> {{ paisUsuario }}</div>
+                            <div><strong>Moneda:</strong> {{ monedaUsuario }}</div>
                             <div v-if="errorStripe" class="text-red-600"><strong>Error:</strong> {{ errorStripe }}</div>
                         </div>
                         <div class="mt-2 text-xs text-yellow-700">
@@ -635,13 +673,13 @@ const formatearFecha = (fecha) => {
                             <div v-if="form.metodo_pago === 'Stripe'" class="flex justify-between">
                                 <span style="color: var(--text-secondary)">Moneda:</span>
                                 <span class="font-medium" style="color: var(--text-primary)">
-                                    {{ form.moneda === 'BOB' ? `Bs ${montoBob.toFixed(2)}` : `$ ${montoUsd}` }}
+                                    {{ monedaUsuario }} ({{ paisUsuario }})
                                 </span>
                             </div>
                             <div class="flex justify-between pt-2 border-t" style="border-color: var(--border-color)">
                                 <span class="font-semibold" style="color: var(--text-primary)">Total a Pagar:</span>
                                 <span class="font-bold text-lg text-green-600">
-                                    Bs {{ parseFloat(viaje?.precio).toFixed(2) }}
+                                    {{ simboloMoneda }} {{ parseFloat(viaje?.precio).toFixed(2) }}
                                 </span>
                             </div>
                         </div>
