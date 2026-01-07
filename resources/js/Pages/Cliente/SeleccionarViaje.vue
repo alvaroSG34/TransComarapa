@@ -1,51 +1,23 @@
 <script setup>
 import ClienteLayout from '@/Layouts/ClienteLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
     ruta: Object,
     viajes: Array
 });
 
-const page = usePage();
-
-// Obtener moneda y símbolo del usuario autenticado
-const monedaUsuario = computed(() => page.props.auth?.user?.moneda || 'BOB');
-const simboloMoneda = computed(() => {
+// Obtener símbolo de moneda según código ISO
+const getSimboloMoneda = (moneda) => {
     const simbolos = {
-        'BOB': 'Bs',
-        'USD': '$',
-        'EUR': '€',
-        'ARS': '$',
-        'AUD': '$',
-        'BRL': 'R$',
-        'CAD': '$',
-        'CLP': '$',
-        'CNY': '¥',
-        'COP': '$',
-        'CRC': '₡',
-        'DKK': 'kr',
-        'GBP': '£',
-        'GTQ': 'Q',
-        'HNL': 'L',
-        'INR': '₹',
-        'JPY': '¥',
-        'KRW': '₩',
-        'MXN': '$',
-        'NIO': 'C$',
-        'NOK': 'kr',
-        'PEN': 'S/',
-        'PYG': '₲',
-        'RON': 'lei',
-        'RUB': '₽',
-        'SEK': 'kr',
-        'CHF': 'Fr',
-        'UYU': '$',
-        'DOP': '$',
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
     };
-    return simbolos[monedaUsuario.value] || '$';
-});
+    return simbolos[moneda || 'BOB'] || '$';
+};
 
 const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleString('es-BO', {
@@ -138,7 +110,7 @@ const formatearFechaCorta = (fecha) => {
                                     </div>
                                     <div class="px-3 py-1 rounded-full text-xs font-semibold"
                                          style="background-color: var(--accent-100); color: var(--accent-700)">
-                                        {{ simboloMoneda }} {{ parseFloat(viaje.precio).toFixed(2) }}
+                                        {{ getSimboloMoneda(viaje.moneda) }} {{ viaje.precio }}
                                     </div>
                                 </div>
                                 

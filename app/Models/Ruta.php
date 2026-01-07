@@ -15,6 +15,8 @@ class Ruta extends Model
         'origen',
         'destino',
         'nombre',
+        'moneda',
+        'pais_operacion',
     ];
 
     // Relaciones

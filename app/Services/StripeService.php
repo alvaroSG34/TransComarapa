@@ -14,6 +14,39 @@ class StripeService
     protected $stripeCurrency;
     protected $bobToUsdRate;
 
+    // Tasas de conversión aproximadas a USD (actualizadas a enero 2026)
+    protected $conversionRates = [
+        'USD' => 1.0,
+        'BOB' => 0.145,      // 1 BOB = 0.145 USD
+        'ARS' => 0.001,      // 1 ARS = 0.001 USD
+        'AUD' => 0.67,       // 1 AUD = 0.67 USD
+        'BRL' => 0.20,       // 1 BRL = 0.20 USD
+        'CAD' => 0.74,       // 1 CAD = 0.74 USD
+        'CLP' => 0.0011,     // 1 CLP = 0.0011 USD
+        'CNY' => 0.14,       // 1 CNY = 0.14 USD
+        'COP' => 0.00025,    // 1 COP = 0.00025 USD
+        'CRC' => 0.0019,     // 1 CRC = 0.0019 USD
+        'DKK' => 0.14,       // 1 DKK = 0.14 USD
+        'EUR' => 1.10,       // 1 EUR = 1.10 USD
+        'GBP' => 1.27,       // 1 GBP = 1.27 USD
+        'GTQ' => 0.13,       // 1 GTQ = 0.13 USD
+        'HNL' => 0.040,      // 1 HNL = 0.040 USD
+        'INR' => 0.012,      // 1 INR = 0.012 USD
+        'JPY' => 0.0069,     // 1 JPY = 0.0069 USD
+        'KRW' => 0.00075,    // 1 KRW = 0.00075 USD
+        'MXN' => 0.059,      // 1 MXN = 0.059 USD
+        'NIO' => 0.027,      // 1 NIO = 0.027 USD
+        'NOK' => 0.094,      // 1 NOK = 0.094 USD
+        'PEN' => 0.27,       // 1 PEN = 0.27 USD
+        'PYG' => 0.00013,    // 1 PYG = 0.00013 USD
+        'RON' => 0.22,       // 1 RON = 0.22 USD
+        'RUB' => 0.010,      // 1 RUB = 0.010 USD
+        'SEK' => 0.096,      // 1 SEK = 0.096 USD
+        'CHF' => 1.17,       // 1 CHF = 1.17 USD
+        'UYU' => 0.025,      // 1 UYU = 0.025 USD
+        'DOP' => 0.017,      // 1 DOP = 0.017 USD
+    ];
+
     public function __construct()
     {
         $this->stripeSecret = config('services.stripe.secret');
@@ -21,6 +54,19 @@ class StripeService
         $this->bobToUsdRate = config('services.stripe.bob_to_usd_rate', 0.145);
         
         Stripe::setApiKey($this->stripeSecret);
+    }
+
+    /**
+     * Convertir cualquier moneda a USD
+     */
+    public function convertirAUsd(float $monto, string $moneda): float
+    {
+        if ($moneda === 'USD') {
+            return $monto;
+        }
+
+        $tasa = $this->conversionRates[$moneda] ?? 1.0;
+        return round($monto * $tasa, 2);
     }
 
     /**
@@ -43,32 +89,46 @@ class StripeService
      * Crear PaymentIntent en Stripe
      * 
      * @param PagoVenta $pagoVenta
-     * @param string $moneda ('BOB' o 'USD')
+     * @param string $moneda Código ISO de moneda del usuario (BOB, USD, PEN, etc.)
      * @return array ['success' => bool, 'payment_intent' => PaymentIntent|null, 'error' => string|null]
      */
     public function crearPaymentIntent(PagoVenta $pagoVenta, string $moneda = 'BOB'): array
     {
         try {
-            // Obtener monto según moneda
-            $monto = $pagoVenta->monto;
-            $montoStripe = null;
+            // Obtener el viaje/venta para saber en qué moneda está el precio original
+            $venta = $pagoVenta->venta;
+            $viaje = $venta->boletos->first()?->viaje; // Si es boleto
+            $monedaViaje = $viaje->moneda ?? 'BOB'; // Moneda original del viaje
+            $montoPrecio = $pagoVenta->monto;
 
-            if ($moneda === 'BOB') {
-                // Convertir BOB a USD para Stripe
-                $montoUsd = $this->convertirBobAUsd($monto);
-                $montoStripe = (int)($montoUsd * 100); // Stripe usa centavos
-                $pagoVenta->update([
-                    'moneda' => 'BOB',
-                    'monto_usd' => $montoUsd
+            // Convertir desde moneda del viaje a USD para Stripe
+            $montoUsd = $this->convertirAUsd($montoPrecio, $monedaViaje);
+            
+            // Validar monto mínimo de Stripe ($0.50 USD)
+            if ($montoUsd < 0.50) {
+                Log::warning('Monto inferior al mínimo de Stripe', [
+                    'pago_venta_id' => $pagoVenta->id,
+                    'moneda_viaje' => $monedaViaje,
+                    'monto_original' => $montoPrecio,
+                    'monto_usd' => $montoUsd,
+                    'minimo_requerido_usd' => 0.50
                 ]);
-            } else {
-                // Ya está en USD
-                $montoStripe = (int)($monto * 100);
-                $pagoVenta->update([
-                    'moneda' => 'USD',
-                    'monto_usd' => $monto
-                ]);
+
+                return [
+                    'success' => false,
+                    'payment_intent' => null,
+                    'client_secret' => null,
+                    'error' => "El monto es demasiado bajo para procesarlo con tarjeta. Mínimo requerido: $0.50 USD (equivalente a aproximadamente {$this->calcularMontoMinimo($monedaViaje)} {$monedaViaje}). Por favor, use el método de pago QR.",
+                ];
             }
+            
+            $montoStripe = (int)($montoUsd * 100); // Stripe usa centavos
+
+            // Guardar información de la transacción
+            $pagoVenta->update([
+                'moneda' => $moneda, // Moneda del usuario
+                'monto_usd' => $montoUsd
+            ]);
 
             // Crear PaymentIntent
             $paymentIntent = PaymentIntent::create([
@@ -78,8 +138,10 @@ class StripeService
                 'metadata' => [
                     'pago_venta_id' => $pagoVenta->id,
                     'venta_id' => $pagoVenta->venta_id,
-                    'moneda_original' => $moneda,
-                    'monto_original' => $monto,
+                    'moneda_usuario' => $moneda,
+                    'moneda_viaje' => $monedaViaje,
+                    'monto_original' => $montoPrecio,
+                    'monto_usd' => $montoUsd,
                 ],
                 'description' => "Pago venta #{$pagoVenta->venta_id} - TransComarapa",
             ]);
@@ -92,8 +154,11 @@ class StripeService
             Log::info('PaymentIntent creado exitosamente', [
                 'payment_intent_id' => $paymentIntent->id,
                 'pago_venta_id' => $pagoVenta->id,
-                'amount' => $montoStripe,
-                'currency' => 'usd',
+                'moneda_usuario' => $moneda,
+                'moneda_viaje' => $monedaViaje,
+                'monto_original' => $montoPrecio,
+                'monto_usd' => $montoUsd,
+                'amount_stripe' => $montoStripe,
             ]);
 
             return [
@@ -128,6 +193,22 @@ class StripeService
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Calcular monto mínimo en moneda local para cumplir con $0.50 USD de Stripe
+     */
+    protected function calcularMontoMinimo(string $moneda): string
+    {
+        $tasa = $this->conversionRates[$moneda] ?? 1.0;
+        $montoMinimo = 0.50 / $tasa;
+        
+        // Redondear según la moneda
+        $sinDecimales = ['JPY', 'KRW', 'CLP', 'PYG', 'COP'];
+        if (in_array($moneda, $sinDecimales)) {
+            return number_format(ceil($montoMinimo), 0, '', '');
+        }
+        return number_format($montoMinimo, 2);
     }
 
     /**

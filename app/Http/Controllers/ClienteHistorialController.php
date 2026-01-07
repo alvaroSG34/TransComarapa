@@ -63,6 +63,7 @@ class ClienteHistorialController extends Controller
                 'ruta_encomienda.destino as ruta_encomienda_destino',
                 // Datos de pago
                 'pago_ventas.metodo_pago',
+                'pago_ventas.moneda',
                 'pago_ventas.qr_base64',
                 'pago_ventas.transaction_id',
                 'pago_ventas.estado_pago as pago_estado'
@@ -132,6 +133,7 @@ class ClienteHistorialController extends Controller
                 ] : null,
                 'pago' => [
                     'metodo_pago' => $venta->metodo_pago,
+                    'moneda' => $venta->moneda ?? 'BOB',
                     'qr_base64' => $venta->qr_base64,
                     'transaction_id' => $venta->transaction_id,
                     'estado_pago' => $venta->pago_estado,

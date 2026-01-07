@@ -48,6 +48,18 @@ const getEstadoBadgeClass = (estado) => {
     return classes[estado] || 'bg-gray-100 text-gray-800';
 };
 
+// Obtener símbolo de moneda
+const getSimboloMoneda = (moneda) => {
+    const simbolos = {
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
+    };
+    return simbolos[moneda || 'BOB'] || 'Bs';
+};
+
 const formatearEstado = (estado) => {
     const estados = {
         programado: 'Programado',
@@ -112,8 +124,7 @@ const viajesCancelados = computed(() => {
                             <table class="min-w-full divide-y" style="border-color: var(--border-primary);">
                                 <thead>
                                     <tr style="background-color: var(--bg-primary);">
-                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">País</th>                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Asientos</th>
@@ -126,14 +137,15 @@ const viajesCancelados = computed(() => {
                                             <div class="text-sm font-medium" style="color: var(--text-primary);">{{ viaje.ruta.nombre }}</div>
                                             <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
-                                            {{ viaje.vehiculo.placa }}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">                                             {{ viaje.ruta.pais_operacion || 'Bolivia' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">                                            {{ viaje.vehiculo.placa }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ formatearFecha(viaje.fecha_salida) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
-                                            Bs {{ viaje.precio }}
+                                            {{ getSimboloMoneda(viaje.moneda) }} {{ viaje.precio }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
@@ -178,6 +190,7 @@ const viajesCancelados = computed(() => {
                                 <thead>
                                     <tr style="background-color: var(--bg-primary);">
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">País</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
@@ -192,13 +205,16 @@ const viajesCancelados = computed(() => {
                                             <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                             {{ viaje.ruta.pais_operacion || 'Bolivia' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.vehiculo.placa }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ formatearFecha(viaje.fecha_salida) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
-                                            Bs {{ viaje.precio }}
+                                            {{ getSimboloMoneda(viaje.moneda) }} {{ viaje.precio }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
@@ -258,6 +274,7 @@ const viajesCancelados = computed(() => {
                                 <thead>
                                     <tr style="background-color: var(--bg-primary);">
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">País</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
@@ -272,13 +289,16 @@ const viajesCancelados = computed(() => {
                                             <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                             {{ viaje.ruta.pais_operacion || 'Bolivia' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.vehiculo.placa }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ formatearFecha(viaje.fecha_salida) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
-                                            Bs {{ viaje.precio }}
+                                            {{ getSimboloMoneda(viaje.moneda) }} {{ viaje.precio }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}
@@ -315,6 +335,7 @@ const viajesCancelados = computed(() => {
                                 <thead>
                                     <tr style="background-color: var(--bg-primary);">
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Ruta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">País</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Vehículo</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Salida</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
@@ -328,13 +349,16 @@ const viajesCancelados = computed(() => {
                                             <div class="text-xs" style="color: var(--text-tertiary);">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                             {{ viaje.ruta.pais_operacion || 'Bolivia' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.vehiculo.placa }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ formatearFecha(viaje.fecha_salida) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
-                                            Bs {{ viaje.precio }}
+                                            {{ getSimboloMoneda(viaje.moneda) }} {{ viaje.precio }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ viaje.boletos_count || 0 }} / {{ viaje.asientos_totales }}

@@ -35,54 +35,27 @@ const errorStripe = ref(null);
 const mostrarFormularioStripe = ref(false);
 const clientSecret = ref(null);
 const estadoDebug = ref('Inicializando...');
-const montoBob = computed(() => parseFloat(props.viaje?.precio) || 0);
-const montoUsd = computed(() => (montoBob.value * 0.145).toFixed(2));
 
-// Información de la moneda del usuario desde $page.props.auth.user
-const monedaUsuario = computed(() => {
-    const user = props.auth?.user;
-    return user?.moneda || 'BOB';
-});
+// Precio y moneda del viaje (sin conversión)
+const montoBob = computed(() => parseFloat(props.viaje?.precio) || 0);
+const monedaViaje = computed(() => props.viaje?.moneda || 'BOB');
+
+// Información del usuario (país y moneda)
+const paisUsuario = computed(() => props.auth?.user?.pais || 'Bolivia');
+const monedaUsuario = computed(() => props.auth?.user?.moneda || 'BOB');
 
 const simboloMoneda = computed(() => {
     const simbolos = {
-        'BOB': 'Bs',
-        'USD': '$',
-        'EUR': '€',
-        'ARS': '$',
-        'AUD': '$',
-        'BRL': 'R$',
-        'CAD': '$',
-        'CLP': '$',
-        'CNY': '¥',
-        'COP': '$',
-        'CRC': '₡',
-        'DKK': 'kr',
-        'GBP': '£',
-        'GTQ': 'Q',
-        'HNL': 'L',
-        'INR': '₹',
-        'JPY': '¥',
-        'KRW': '₩',
-        'MXN': '$',
-        'NIO': 'C$',
-        'NOK': 'kr',
-        'PEN': 'S/',
-        'PYG': '₲',
-        'RON': 'lei',
-        'RUB': '₽',
-        'SEK': 'kr',
-        'CHF': 'Fr',
-        'UYU': '$',
-        'DOP': '$',
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
     };
-    return simbolos[monedaUsuario.value] || '$';
+    return simbolos[monedaViaje.value] || '$';
 });
 
-const paisUsuario = computed(() => {
-    const user = props.auth?.user;
-    return user?.pais || 'Bolivia';
-});
+
 
 // Inicializar Stripe
 onMounted(async () => {
@@ -440,7 +413,7 @@ const formatearFecha = (fecha) => {
                     <div>
                         <span style="color: var(--text-secondary)">Precio:</span>
                         <span class="ml-2 font-bold text-lg text-green-600">
-                            {{ simboloMoneda }} {{ parseFloat(viaje?.precio).toFixed(2) }}
+                            {{ simboloMoneda }} {{ montoBob.toFixed(2) }}
                         </span>
                     </div>
                     <div>
@@ -679,7 +652,7 @@ const formatearFecha = (fecha) => {
                             <div class="flex justify-between pt-2 border-t" style="border-color: var(--border-color)">
                                 <span class="font-semibold" style="color: var(--text-primary)">Total a Pagar:</span>
                                 <span class="font-bold text-lg text-green-600">
-                                    {{ simboloMoneda }} {{ parseFloat(viaje?.precio).toFixed(2) }}
+                                    {{ simboloMoneda }} {{ montoBob.toFixed(2) }}
                                 </span>
                             </div>
                         </div>

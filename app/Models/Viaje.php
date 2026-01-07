@@ -17,6 +17,7 @@ class Viaje extends Model
         'fecha_salida',
         'fecha_llegada',
         'precio',
+        'moneda',
         'asientos_totales',
         'estado',
     ];

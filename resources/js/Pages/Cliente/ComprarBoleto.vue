@@ -1,10 +1,26 @@
 <script setup>
 import ClienteLayout from '@/Layouts/ClienteLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 import busImage from '../../../images/bus.jpg';
 
 const props = defineProps({
-    rutas: Array
+    rutas: Array,
+    paisesDisponibles: Array,
+    paisSeleccionado: String,
+    paisUsuario: String
+});
+
+const paisFiltro = ref(props.paisSeleccionado || 'todos');
+
+// Aplicar filtro cuando cambia
+watch(paisFiltro, (newValue) => {
+    router.get(route('cliente.boletos.comprar'), {
+        pais: newValue
+    }, {
+        preserveState: true,
+        preserveScroll: true
+    });
 });
 
 // Función para obtener la imagen de la ruta (placeholder por ahora)
@@ -32,6 +48,30 @@ const obtenerImagenRuta = (ruta) => {
         </template>
 
         <div class="space-y-8">
+            <!-- Filtros -->
+            <div class="p-6 rounded-2xl shadow-lg" style="background-color: var(--card-bg); border: 1px solid var(--border-color)">
+                <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium" style="color: var(--text-secondary)">🌎 Filtrar por país:</span>
+                    </div>
+                    <div class="flex-1 max-w-xs">
+                        <select
+                            v-model="paisFiltro"
+                            class="w-full px-4 py-2 rounded-lg border transition-all focus:outline-none focus:ring-2"
+                            style="background-color: var(--bg-primary); color: var(--text-primary); border-color: var(--border-primary);"
+                        >
+                            <option value="todos">Todos los países</option>
+                            <option v-for="pais in paisesDisponibles" :key="pais" :value="pais">
+                                {{ pais }}
+                            </option>
+                        </select>
+                    </div>
+                    <div v-if="paisFiltro !== 'todos'" class="text-sm" style="color: var(--text-tertiary)">
+                        Mostrando {{ rutas.length }} ruta(s)
+                    </div>
+                </div>
+            </div>
+
             <!-- Grid de Rutas -->
             <div v-if="rutas && rutas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Link
@@ -54,9 +94,14 @@ const obtenerImagenRuta = (ruta) => {
 
                     <!-- Contenido de la Card -->
                     <div class="p-6" style="background-color: var(--card-bg);">
-                        <h3 class="text-xl font-bold mb-2" style="color: var(--text-primary)">
-                            {{ ruta.nombre }}
-                        </h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xl font-bold" style="color: var(--text-primary)">
+                                {{ ruta.nombre }}
+                            </h3>
+                            <span class="text-xs px-2 py-1 rounded-full" style="background-color: var(--primary-100); color: var(--primary-700);">
+                                🌎 {{ ruta.pais_operacion || 'Bolivia' }}
+                            </span>
+                        </div>
                         <div class="flex items-center gap-2 text-sm mb-4" style="color: var(--text-secondary)">
                             <span class="font-semibold" style="color: var(--primary-600)">{{ ruta.origen }}</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

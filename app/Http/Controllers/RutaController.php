@@ -44,6 +44,8 @@ class RutaController extends Controller
             'origen' => 'required|string|max:100',
             'destino' => 'required|string|max:100',
             'nombre' => 'required|string|max:255',
+            'pais_operacion' => 'required|string|max:100',
+            'moneda' => 'required|string|size:3',
         ]);
 
         $this->rutaRepository->create($validated);
@@ -95,6 +97,8 @@ class RutaController extends Controller
             'origen' => 'required|string|max:100',
             'destino' => 'required|string|max:100',
             'nombre' => 'required|string|max:255',
+            'pais_operacion' => 'required|string|max:100',
+            'moneda' => 'required|string|size:3',
         ]);
 
         $updated = $this->rutaRepository->update($id, $validated);

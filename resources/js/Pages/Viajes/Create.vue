@@ -33,6 +33,32 @@ const rutaSeleccionada = computed(() => {
 const vehiculoSeleccionado = computed(() => {
     return props.vehiculos.find(v => v.id === parseInt(form.vehiculo_id));
 });
+
+// Obtener moneda y símbolo de la ruta seleccionada
+const monedaRuta = computed(() => rutaSeleccionada.value?.moneda || 'BOB');
+const simboloMoneda = computed(() => {
+    const simbolos = {
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
+    };
+    return simbolos[monedaRuta.value] || '$';
+});
+const nombreMoneda = computed(() => {
+    const nombres = {
+        'BOB': 'Bolivianos', 'USD': 'Dólares', 'EUR': 'Euros', 'ARS': 'Pesos Argentinos',
+        'AUD': 'Dólares Australianos', 'BRL': 'Reales', 'CAD': 'Dólares Canadienses',
+        'CLP': 'Pesos Chilenos', 'CNY': 'Yuanes', 'COP': 'Pesos Colombianos',
+        'CRC': 'Colones', 'DKK': 'Coronas Danesas', 'GBP': 'Libras', 'GTQ': 'Quetzales',
+        'HNL': 'Lempiras', 'INR': 'Rupias', 'JPY': 'Yenes', 'KRW': 'Wones',
+        'MXN': 'Pesos Mexicanos', 'NIO': 'Córdobas', 'NOK': 'Coronas Noruegas',
+        'PEN': 'Soles', 'PYG': 'Guaraníes', 'RON': 'Lei', 'RUB': 'Rublos',
+        'SEK': 'Coronas Suecas', 'CHF': 'Francos', 'UYU': 'Pesos Uruguayos', 'DOP': 'Pesos Dominicanos',
+    };
+    return nombres[monedaRuta.value] || 'Bolivianos';
+});
 </script>
 
 <template>
@@ -76,7 +102,7 @@ const vehiculoSeleccionado = computed(() => {
                                 </p>
                                 <p v-if="rutaSeleccionada" class="mt-2 text-sm" style="color: var(--text-secondary)">
                                     Duración estimada: {{ rutaSeleccionada.duracion_estimada }} | 
-                                    Distancia: {{ rutaSeleccionada.distancia }} km
+                                   
                                 </p>
                             </div>
 
@@ -155,7 +181,7 @@ const vehiculoSeleccionado = computed(() => {
                             <!-- Precio por Asiento -->
                             <div>
                                 <label for="precio" class="block text-sm font-medium mb-2">
-                                    Precio por Asiento (Bs) *
+                                    Precio por Asiento ({{ simboloMoneda }} {{ monedaRuta }}) *
                                 </label>
                                 <input
                                     id="precio"
@@ -172,8 +198,11 @@ const vehiculoSeleccionado = computed(() => {
                                 <p v-if="form.errors.precio" class="mt-1 text-sm text-red-600">
                                     {{ form.errors.precio }}
                                 </p>
-                                <p v-else class="mt-1 text-sm" style="color: var(--text-secondary)">
-                                    Ingrese el precio en bolivianos (mínimo 0)
+                                <p v-else-if="rutaSeleccionada" class="mt-1 text-sm" style="color: var(--text-secondary)">
+                                    Ingrese el precio en {{ nombreMoneda }} (mínimo 0)
+                                </p>
+                                <p v-else class="mt-1 text-sm text-amber-600">
+                                    ⚠️ Seleccione primero una ruta para ver la moneda correspondiente
                                 </p>
                             </div>
 

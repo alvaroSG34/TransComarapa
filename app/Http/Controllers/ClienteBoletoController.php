@@ -41,12 +41,37 @@ class ClienteBoletoController extends Controller
     /**
      * Mostrar todas las rutas disponibles para comprar boletos
      */
-    public function mostrarRutas()
+    public function mostrarRutas(Request $request)
     {
+        // Obtener el país del usuario autenticado
+        $usuario = $request->user();
+        $paisUsuario = $usuario->pais ?? 'Bolivia';
+        
+        // Obtener filtro de país desde request o usar el del usuario
+        $paisFiltro = $request->input('pais', $paisUsuario);
+        
+        // Obtener todas las rutas
         $rutas = $this->rutaRepository->all();
+        
+        // Filtrar por país si se especifica
+        if ($paisFiltro && $paisFiltro !== 'todos') {
+            $rutas = $rutas->filter(function($ruta) use ($paisFiltro) {
+                return $ruta->pais_operacion === $paisFiltro;
+            })->values();
+        }
+        
+        // Obtener lista única de países disponibles
+        $paisesDisponibles = $this->rutaRepository->all()
+            ->pluck('pais_operacion')
+            ->unique()
+            ->sort()
+            ->values();
 
         return Inertia::render('Cliente/ComprarBoleto', [
-            'rutas' => $rutas
+            'rutas' => $rutas,
+            'paisesDisponibles' => $paisesDisponibles,
+            'paisSeleccionado' => $paisFiltro,
+            'paisUsuario' => $paisUsuario
         ]);
     }
 
@@ -76,6 +101,7 @@ class ClienteBoletoController extends Controller
                 'viajes.fecha_salida',
                 'viajes.fecha_llegada',
                 'viajes.precio',
+                'viajes.moneda',
                 'viajes.asientos_totales',
                 'viajes.estado',
                 'rutas.nombre as ruta_nombre',
@@ -137,6 +163,7 @@ class ClienteBoletoController extends Controller
                 'viajes.fecha_salida',
                 'viajes.fecha_llegada',
                 'viajes.precio',
+                'viajes.moneda',
                 'viajes.asientos_totales',
                 'viajes.estado',
                 'viajes.vehiculo_id',

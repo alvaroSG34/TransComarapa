@@ -15,6 +15,18 @@ const deleteRuta = (id) => {
         router.delete(route('rutas.destroy', id));
     }
 };
+
+// Obtener símbolo de moneda
+const getSimboloMoneda = (moneda) => {
+    const simbolos = {
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
+    };
+    return simbolos[moneda || 'BOB'] || 'Bs';
+};
 </script>
 
 <template>
@@ -57,6 +69,12 @@ const deleteRuta = (id) => {
                                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">
                                             Destino
                                         </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">
+                                            País
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">
+                                            Moneda
+                                        </th>
                                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">
                                             Acciones
                                         </th>
@@ -75,6 +93,14 @@ const deleteRuta = (id) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
                                             {{ ruta.destino }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--text-secondary);">
+                                            <span class="inline-flex items-center">
+                                                 {{ ruta.pais_operacion || 'Bolivia' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" style="color: var(--text-primary);">
+                                            {{ getSimboloMoneda(ruta.moneda) }} {{ ruta.moneda || 'BOB' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex justify-end gap-2">

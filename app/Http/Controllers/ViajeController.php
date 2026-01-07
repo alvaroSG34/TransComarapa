@@ -64,6 +64,10 @@ class ViajeController extends Controller
             'asientos_totales' => 'required|integer|min:1|max:100',
         ]);
 
+        // Obtener la ruta para heredar su moneda
+        $ruta = $this->rutaRepository->find($validated['ruta_id']);
+        $validated['moneda'] = $ruta->moneda ?? 'BOB';
+
         $this->viajeRepository->create($validated);
 
         return redirect()->route('viajes.index')
@@ -121,6 +125,10 @@ class ViajeController extends Controller
             'precio' => 'required|numeric|min:0',
             'asientos_totales' => 'required|integer|min:1|max:100',
         ]);
+
+        // Heredar moneda de la ruta si cambió la ruta
+        $ruta = $this->rutaRepository->find($validated['ruta_id']);
+        $validated['moneda'] = $ruta->moneda ?? 'BOB';
 
         $updated = $this->viajeRepository->update($id, $validated);
 

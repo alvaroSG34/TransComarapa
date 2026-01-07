@@ -1,6 +1,6 @@
 <script setup>
 import ClienteLayout from '@/Layouts/ClienteLayout.vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import axios from 'axios';
 
@@ -9,44 +9,17 @@ const props = defineProps({
     filtros: Object
 });
 
-const page = usePage();
-
-// Obtener moneda y símbolo del usuario autenticado
-const monedaUsuario = computed(() => page.props.auth?.user?.moneda || 'BOB');
-const simboloMoneda = computed(() => {
+// Obtener símbolo de moneda según código ISO
+const getSimboloMoneda = (moneda) => {
     const simbolos = {
-        'BOB': 'Bs',
-        'USD': '$',
-        'EUR': '€',
-        'ARS': '$',
-        'AUD': '$',
-        'BRL': 'R$',
-        'CAD': '$',
-        'CLP': '$',
-        'CNY': '¥',
-        'COP': '$',
-        'CRC': '₡',
-        'DKK': 'kr',
-        'GBP': '£',
-        'GTQ': 'Q',
-        'HNL': 'L',
-        'INR': '₹',
-        'JPY': '¥',
-        'KRW': '₩',
-        'MXN': '$',
-        'NIO': 'C$',
-        'NOK': 'kr',
-        'PEN': 'S/',
-        'PYG': '₲',
-        'RON': 'lei',
-        'RUB': '₽',
-        'SEK': 'kr',
-        'CHF': 'Fr',
-        'UYU': '$',
-        'DOP': '$',
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
     };
-    return simbolos[monedaUsuario.value] || '$';
-});
+    return simbolos[moneda || 'BOB'] || '$';
+};
 
 const tipoFiltro = ref(props.filtros?.tipo || 'todos');
 const estadoFiltro = ref(props.filtros?.estado_pago || 'todos');
@@ -314,7 +287,7 @@ const verificarEstadoPago = async (compra) => {
                                 {{ compra.estado_pago }}
                             </span>
                             <span class="text-xl font-bold text-green-600">
-                                {{ simboloMoneda }} {{ parseFloat(compra.monto_total).toFixed(2) }}
+                                {{ getSimboloMoneda(compra.pago?.moneda) }} {{ parseFloat(compra.monto_total).toFixed(2) }}
                             </span>
                         </div>
                     </div>
@@ -498,7 +471,7 @@ const verificarEstadoPago = async (compra) => {
                             ID de Transacción: {{ qrData.transaction_id || 'N/A' }}
                         </p>
                         <p class="text-sm font-medium mb-4" style="color: var(--text-primary)">
-                            Monto: {{ simboloMoneda }} {{ parseFloat(qrData.monto_total).toFixed(2) }}
+                            Monto: {{ getSimboloMoneda(qrData.pago?.moneda) }} {{ parseFloat(qrData.monto_total).toFixed(2) }}
                         </p>
                         <div class="flex gap-2 justify-center">
                             <button
