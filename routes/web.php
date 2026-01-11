@@ -92,7 +92,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/boletos/ruta/{rutaId}/viajes', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarViajes'])->name('boletos.viajes');
         Route::get('/boletos/viaje/{viajeId}/ruta/{rutaId}/form', [\App\Http\Controllers\ClienteBoletoController::class, 'mostrarFormularioCompra'])->name('boletos.form');
         Route::get('/boletos/viaje/{viajeId}/asientos-ocupados', [\App\Http\Controllers\ClienteBoletoController::class, 'obtenerAsientosOcupados'])->name('boletos.asientos-ocupados');
-        Route::post('/boletos/procesar-compra', [\App\Http\Controllers\ClienteBoletoController::class, 'procesarCompra'])->name('boletos.procesar-compra');
+        Route::match(['get', 'post'], '/boletos/procesar-compra', [\App\Http\Controllers\ClienteBoletoController::class, 'procesarCompra'])->name('boletos.procesar-compra');
         
         Route::get('/encomiendas/enviar', function () {
             return Inertia::render('Cliente/EnviarEncomienda');

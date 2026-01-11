@@ -16,43 +16,45 @@ class StripeService
 
     // Tasas de conversión aproximadas a USD (actualizadas a enero 2026)
     protected $conversionRates = [
-        'USD' => 1.0,
-        'BOB' => 0.145,      // 1 BOB = 0.145 USD
-        'ARS' => 0.001,      // 1 ARS = 0.001 USD
-        'AUD' => 0.67,       // 1 AUD = 0.67 USD
-        'BRL' => 0.20,       // 1 BRL = 0.20 USD
-        'CAD' => 0.74,       // 1 CAD = 0.74 USD
-        'CLP' => 0.0011,     // 1 CLP = 0.0011 USD
-        'CNY' => 0.14,       // 1 CNY = 0.14 USD
-        'COP' => 0.00025,    // 1 COP = 0.00025 USD
-        'CRC' => 0.0019,     // 1 CRC = 0.0019 USD
-        'DKK' => 0.14,       // 1 DKK = 0.14 USD
-        'EUR' => 1.10,       // 1 EUR = 1.10 USD
-        'GBP' => 1.27,       // 1 GBP = 1.27 USD
-        'GTQ' => 0.13,       // 1 GTQ = 0.13 USD
-        'HNL' => 0.040,      // 1 HNL = 0.040 USD
-        'INR' => 0.012,      // 1 INR = 0.012 USD
-        'JPY' => 0.0069,     // 1 JPY = 0.0069 USD
-        'KRW' => 0.00075,    // 1 KRW = 0.00075 USD
-        'MXN' => 0.059,      // 1 MXN = 0.059 USD
-        'NIO' => 0.027,      // 1 NIO = 0.027 USD
-        'NOK' => 0.094,      // 1 NOK = 0.094 USD
-        'PEN' => 0.27,       // 1 PEN = 0.27 USD
-        'PYG' => 0.00013,    // 1 PYG = 0.00013 USD
-        'RON' => 0.22,       // 1 RON = 0.22 USD
-        'RUB' => 0.010,      // 1 RUB = 0.010 USD
-        'SEK' => 0.096,      // 1 SEK = 0.096 USD
-        'CHF' => 1.17,       // 1 CHF = 1.17 USD
-        'UYU' => 0.025,      // 1 UYU = 0.025 USD
-        'DOP' => 0.017,      // 1 DOP = 0.017 USD
+        'USD' => 1.000000,
+
+        'BOB' => 0.144303,
+        'ARS' => 0.000689,
+        'AUD' => 0.669758,
+        'BRL' => 0.185644,
+        'CAD' => 0.721369,
+        'CLP' => 0.001116,
+        'CNY' => 0.142936,
+        'COP' => 0.000268,
+        'CRC' => 0.002011,
+        'DKK' => 0.156313,
+        'EUR' => 1.166310,
+        'GBP' => 1.343743,
+        'GTQ' => 0.130443,
+        'HNL' => 0.037910,
+        'INR' => 0.011113,
+        'JPY' => 0.006376,
+        'KRW' => 0.000689,
+        'MXN' => 0.055631,
+        'NIO' => 0.027168,
+        'NOK' => 0.099129,
+        'PEN' => 0.297340,
+        'PYG' => 0.000150,
+        'RON' => 0.229401,
+        'RUB' => 0.012469,
+        'SEK' => 0.108447,
+        'CHF' => 1.252263,
+        'UYU' => 0.025659,
+        'DOP' => 0.015755,
     ];
+
 
     public function __construct()
     {
         $this->stripeSecret = config('services.stripe.secret');
         $this->stripeCurrency = config('services.stripe.currency', 'USD');
         $this->bobToUsdRate = config('services.stripe.bob_to_usd_rate', 0.145);
-        
+
         Stripe::setApiKey($this->stripeSecret);
     }
 
@@ -103,7 +105,7 @@ class StripeService
 
             // Convertir desde moneda del viaje a USD para Stripe
             $montoUsd = $this->convertirAUsd($montoPrecio, $monedaViaje);
-            
+
             // Validar monto mínimo de Stripe ($0.50 USD)
             if ($montoUsd < 0.50) {
                 Log::warning('Monto inferior al mínimo de Stripe', [
@@ -121,8 +123,8 @@ class StripeService
                     'error' => "El monto es demasiado bajo para procesarlo con tarjeta. Mínimo requerido: $0.50 USD (equivalente a aproximadamente {$this->calcularMontoMinimo($monedaViaje)} {$monedaViaje}). Por favor, use el método de pago QR.",
                 ];
             }
-            
-            $montoStripe = (int)($montoUsd * 100); // Stripe usa centavos
+
+            $montoStripe = (int) ($montoUsd * 100); // Stripe usa centavos
 
             // Guardar información de la transacción
             $pagoVenta->update([
@@ -202,7 +204,7 @@ class StripeService
     {
         $tasa = $this->conversionRates[$moneda] ?? 1.0;
         $montoMinimo = 0.50 / $tasa;
-        
+
         // Redondear según la moneda
         $sinDecimales = ['JPY', 'KRW', 'CLP', 'PYG', 'COP'];
         if (in_array($moneda, $sinDecimales)) {

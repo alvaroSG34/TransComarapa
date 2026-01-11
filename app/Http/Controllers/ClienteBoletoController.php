@@ -11,6 +11,7 @@ use App\Services\StripeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ClienteBoletoController extends Controller
@@ -228,63 +229,103 @@ class ClienteBoletoController extends Controller
      */
     public function procesarCompra(Request $request)
     {
+        // Si es un GET (F5 después de POST), limpiar ventas pendientes recientes y redirigir
+        if ($request->isMethod('GET')) {
+            // Eliminar ventas pendientes de Stripe del usuario creadas en los últimos 15 minutos
+            // que no han sido pagadas (evitar que bloqueen asientos)
+            $ventasPendientes = DB::table('ventas')
+                ->join('boletos', 'ventas.id', '=', 'boletos.venta_id')
+                ->join('pago_ventas', 'ventas.id', '=', 'pago_ventas.venta_id')
+                ->where('ventas.usuario_id', $request->user()->id)
+                ->where('ventas.estado_pago', 'Pendiente')
+                ->where('pago_ventas.metodo_pago', 'Stripe')
+                ->where('ventas.created_at', '>=', now()->subMinutes(15))
+                ->select('ventas.id', 'boletos.id as boleto_id', 'pago_ventas.id as pago_id')
+                ->get();
+
+            foreach ($ventasPendientes as $venta) {
+                // Eliminar en orden: PagoVenta -> Boleto -> Venta
+                DB::table('pago_ventas')->where('id', $venta->pago_id)->delete();
+                DB::table('boletos')->where('id', $venta->boleto_id)->delete();
+                DB::table('ventas')->where('id', $venta->id)->delete();
+            }
+
+            return redirect()->route('cliente.boletos.comprar')
+                ->with('info', 'La sesión de compra expiró. El asiento ha sido liberado. Por favor, inicie el proceso nuevamente.');
+        }
+
         $validated = $request->validate([
             'viaje_id' => 'required|exists:viajes,id',
             'asiento' => 'required|integer|min:1',
             'metodo_pago' => 'required|in:QR,Stripe',
         ]);
 
-        // Obtener el usuario autenticado (cliente)
-        $cliente = $request->user();
-        
-        if (!$cliente) {
+        // Lock atómico para prevenir condiciones de carrera
+        $lockKey = "asiento_compra_{$validated['viaje_id']}_{$validated['asiento']}";
+        $lock = Cache::lock($lockKey, 10); // 10 segundos de timeout
+
+        if (!$lock->get()) {
             return back()->withErrors([
-                'error' => 'Debe estar autenticado para realizar una compra.'
+                'asiento' => 'Este asiento está siendo procesado por otro usuario. Por favor, intente nuevamente en unos segundos o seleccione otro asiento.'
             ])->withInput();
         }
 
-        // Verificar que el viaje esté disponible
-        $viaje = $this->viajeRepository->find($validated['viaje_id']);
-        
-        if (!$viaje || $viaje->estado !== 'programado') {
-            return back()->withErrors([
-                'viaje_id' => 'El viaje no está disponible para venta.'
-            ])->withInput();
-        }
+        try {
+            // Obtener el usuario autenticado (cliente)
+            $cliente = $request->user();
+            
+            if (!$cliente) {
+                $lock->release();
+                return back()->withErrors([
+                    'error' => 'Debe estar autenticado para realizar una compra.'
+                ])->withInput();
+            }
 
-        // Validar que la fecha y hora de salida no hayan pasado
-        $fechaSalida = \Carbon\Carbon::parse($viaje->fecha_salida);
-        if (!$fechaSalida->isFuture()) {
-            return back()->withErrors([
-                'viaje_id' => 'El viaje seleccionado no está disponible porque su fecha y hora de salida ya pasaron.'
-            ])->withInput();
-        }
+            // Verificar que el viaje esté disponible
+            $viaje = $this->viajeRepository->find($validated['viaje_id']);
+            
+            if (!$viaje || $viaje->estado !== 'programado') {
+                $lock->release();
+                return back()->withErrors([
+                    'viaje_id' => 'El viaje no está disponible para venta.'
+                ])->withInput();
+            }
 
-        // Verificar asientos disponibles
-        $boletosVendidos = DB::table('boletos')
-            ->where('viaje_id', $viaje->id)
-            ->count();
-        
-        if ($boletosVendidos >= $viaje->asientos_totales) {
-            return back()->withErrors([
-                'asiento' => 'No hay asientos disponibles en este viaje.'
-            ])->withInput();
-        }
+            // Validar que la fecha y hora de salida no hayan pasado
+            $fechaSalida = \Carbon\Carbon::parse($viaje->fecha_salida);
+            if (!$fechaSalida->isFuture()) {
+                $lock->release();
+                return back()->withErrors([
+                    'viaje_id' => 'El viaje seleccionado no está disponible porque su fecha y hora de salida ya pasaron.'
+                ])->withInput();
+            }
 
-        // Verificar que el asiento no esté ocupado
-        $asientoOcupado = DB::table('boletos')
-            ->where('viaje_id', $viaje->id)
-            ->where('asiento', $validated['asiento'])
-            ->exists();
+            // Verificar asientos disponibles
+            $boletosVendidos = DB::table('boletos')
+                ->where('viaje_id', $viaje->id)
+                ->count();
+            
+            if ($boletosVendidos >= $viaje->asientos_totales) {
+                $lock->release();
+                return back()->withErrors([
+                    'asiento' => 'No hay asientos disponibles en este viaje.'
+                ])->withInput();
+            }
 
-        if ($asientoOcupado) {
-            return back()->withErrors([
-                'asiento' => 'El asiento número ' . $validated['asiento'] . ' ya está ocupado. Por favor seleccione otro asiento.'
-            ])->withInput();
-        }
+            // Verificar que el asiento no esté ocupado
+            $asientoOcupado = DB::table('boletos')
+                ->where('viaje_id', $viaje->id)
+                ->where('asiento', $validated['asiento'])
+                ->exists();
 
-        return DB::transaction(function () use ($validated, $viaje, $cliente) {
-            try {
+            if ($asientoOcupado) {
+                $lock->release();
+                return back()->withErrors([
+                    'asiento' => 'El asiento número ' . $validated['asiento'] . ' ya está ocupado. Por favor seleccione otro asiento.'
+                ])->withInput();
+            }
+
+            return DB::transaction(function () use ($validated, $viaje, $cliente, $lock) {
                 // Crear venta usando el servicio
                 $ventaData = [
                     'fecha' => now(),
@@ -347,8 +388,8 @@ class ClienteBoletoController extends Controller
                     }
                 } elseif ($validated['metodo_pago'] === 'Stripe') {
                     try {
-                        // Usar la moneda del usuario
-                        $moneda = $cliente->moneda ?? 'USD';
+                        // Usar la moneda del viaje (configurada por el administrador)
+                        $moneda = $viaje->moneda ?? 'BOB';
                         
                         // Crear PagoVenta para Stripe
                         $pagoVenta = $this->pagoService->crearPago([
@@ -405,6 +446,7 @@ class ClienteBoletoController extends Controller
                         'viajes.fecha_salida',
                         'viajes.fecha_llegada',
                         'viajes.precio',
+                        'viajes.moneda',
                         'viajes.asientos_totales',
                         'viajes.estado',
                         'viajes.vehiculo_id',
@@ -423,6 +465,9 @@ class ClienteBoletoController extends Controller
                 
                 $viajeData->asientos_disponibles = $viajeData->asientos_totales - $boletosVendidos;
 
+                // Liberar lock después de completar la transacción exitosamente
+                $lock->release();
+
                 return Inertia::render('Cliente/ComprarBoletoForm', [
                     'ruta' => $ruta,
                     'viaje' => $viajeData,
@@ -431,12 +476,15 @@ class ClienteBoletoController extends Controller
                     'stripe_key' => config('services.stripe.key'),
                     'success' => 'Boleto comprado exitosamente!'
                 ]);
-            } catch (\Exception $e) {
-                \Log::error('Error al procesar compra: ' . $e->getMessage());
-                return back()->withErrors([
-                    'error' => 'Ocurrió un error al procesar la compra. Por favor, intente nuevamente.'
-                ])->withInput();
-            }
-        });
+            });
+        } catch (\Exception $e) {
+            // Liberar lock en caso de error
+            $lock->release();
+            
+            \Log::error('Error al procesar compra: ' . $e->getMessage());
+            return back()->withErrors([
+                'error' => 'Ocurrió un error al procesar la compra. Por favor, intente nuevamente.'
+            ])->withInput();
+        }
     }
 }

@@ -80,6 +80,17 @@ const getEstadoPagoColor = (estado) => {
     };
     return colores[estado] || 'bg-gray-100 text-gray-800';
 };
+
+const getSimboloMoneda = (moneda) => {
+    const simbolos = {
+        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
+        'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
+        'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
+        'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
+    };
+    return simbolos[moneda] || '$';
+};
 </script>
 
 <template>
@@ -230,7 +241,7 @@ const getEstadoPagoColor = (estado) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium" style="color: var(--text-primary)">
-                                                Bs {{ parseFloat(boleto.precio).toFixed(2) }}
+                                                {{ getSimboloMoneda(boleto.moneda) }} {{ parseFloat(boleto.precio).toFixed(2) }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
@@ -254,7 +265,7 @@ const getEstadoPagoColor = (estado) => {
                                             </a>
                                             <!-- Botón Marcar Pagado - Solo para Efectivo -->
                                             <button
-                                                v-if="boleto.metodo_pago !== 'QR'"
+                                                v-if="boleto.metodo_pago !== 'QR' && boleto.metodo_pago !== 'Stripe'"
                                                 @click="marcarPagado(boleto.id)"
                                                 class="inline-block px-3 py-1 rounded text-sm text-green-600 hover:text-green-800 font-medium"
                                             >
@@ -347,13 +358,18 @@ const getEstadoPagoColor = (estado) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium" style="color: var(--text-primary)">
-                                                Bs {{ parseFloat(boleto.precio).toFixed(2) }}
+                                                {{ getSimboloMoneda(boleto.moneda) }} {{ parseFloat(boleto.precio).toFixed(2) }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div v-if="boleto.metodo_pago === 'QR'">
                                                 <span class="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium">
                                                     QR
+                                                </span>
+                                            </div>
+                                            <div v-else-if="boleto.metodo_pago === 'Stripe'">
+                                                <span class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium">
+                                                    Tarjeta (Stripe)
                                                 </span>
                                             </div>
                                             <div v-else>
@@ -450,13 +466,18 @@ const getEstadoPagoColor = (estado) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium" style="color: var(--text-primary)">
-                                                Bs {{ parseFloat(boleto.precio).toFixed(2) }}
+                                                {{ getSimboloMoneda(boleto.moneda) }} {{ parseFloat(boleto.precio).toFixed(2) }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div v-if="boleto.metodo_pago === 'QR'">
                                                 <span class="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium">
                                                     QR
+                                                </span>
+                                            </div>
+                                            <div v-else-if="boleto.metodo_pago === 'Stripe'">
+                                                <span class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium">
+                                                    Tarjeta (Stripe)
                                                 </span>
                                             </div>
                                             <div v-else>

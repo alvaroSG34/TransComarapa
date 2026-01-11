@@ -1,13 +1,14 @@
 <script setup>
 import ClienteLayout from '@/Layouts/ClienteLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
     compras: Array,
     filtros: Object
 });
+
 
 // Obtener símbolo de moneda según código ISO
 const getSimboloMoneda = (moneda) => {
@@ -18,7 +19,7 @@ const getSimboloMoneda = (moneda) => {
         'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
         'RUB': '₽', 'SEK': 'kr', 'CHF': 'Fr', 'UYU': '$', 'DOP': '$',
     };
-    return simbolos[moneda || 'BOB'] || '$';
+    return simbolos[moneda || 'BOBOBO'] || 'DDD';
 };
 
 const tipoFiltro = ref(props.filtros?.tipo || 'todos');
@@ -286,7 +287,8 @@ const verificarEstadoPago = async (compra) => {
                             <span class="px-3 py-1 rounded-full text-sm font-semibold" :class="obtenerColorEstado(compra.estado_pago)">
                                 {{ compra.estado_pago }}
                             </span>
-                            <span class="text-xl font-bold text-green-600">
+                            <span class="text-xl font-bold text-green-600" @click="console.log('Compra:', { id: compra.id, moneda: compra.pago?.moneda, monto: compra.monto_total, pago: compra.pago })">
+                           
                                 {{ getSimboloMoneda(compra.pago?.moneda) }} {{ parseFloat(compra.monto_total).toFixed(2) }}
                             </span>
                         </div>
@@ -499,7 +501,5 @@ const verificarEstadoPago = async (compra) => {
     </ClienteLayout>
 </template>
 
-<style scoped>
-/* Estilos adicionales si es necesario */
-</style>
+
 

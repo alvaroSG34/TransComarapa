@@ -53,6 +53,7 @@ class BoletoController extends Controller
                 'boletos.*',
                 'viajes.fecha_salida',
                 'viajes.precio',
+                'viajes.moneda',
                 'rutas.nombre as ruta_nombre',
                 'rutas.origen',
                 'rutas.destino',

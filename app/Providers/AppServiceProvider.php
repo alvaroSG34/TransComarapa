@@ -17,7 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Registrar UserProvider personalizado para manejar campo 'correo' como 'email'
+        $this->app['auth']->provider('correo', function ($app, array $config) {
+            return new \App\Auth\CorreoUserProvider($app['hash'], $config['model']);
+        });
     }
 
     /**

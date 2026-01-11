@@ -36,17 +36,13 @@ const mostrarFormularioStripe = ref(false);
 const clientSecret = ref(null);
 const estadoDebug = ref('Inicializando...');
 
-// Precio y moneda del viaje (sin conversión)
+// Precio y moneda del viaje (configurada por el administrador)
 const montoBob = computed(() => parseFloat(props.viaje?.precio) || 0);
 const monedaViaje = computed(() => props.viaje?.moneda || 'BOB');
 
-// Información del usuario (país y moneda)
-const paisUsuario = computed(() => props.auth?.user?.pais || 'Bolivia');
-const monedaUsuario = computed(() => props.auth?.user?.moneda || 'BOB');
-
 const simboloMoneda = computed(() => {
     const simbolos = {
-        'BOB': 'Bs', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
+        'BOB': 'Bss', 'USD': '$', 'EUR': '€', 'ARS': '$', 'AUD': '$', 'BRL': 'R$',
         'CAD': '$', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'DKK': 'kr',
         'GBP': '£', 'GTQ': 'Q', 'HNL': 'L', 'INR': '₹', 'JPY': '¥', 'KRW': '₩',
         'MXN': '$', 'NIO': 'C$', 'NOK': 'kr', 'PEN': 'S/', 'PYG': '₲', 'RON': 'lei',
@@ -61,6 +57,10 @@ const simboloMoneda = computed(() => {
 onMounted(async () => {
     console.log('🔵 [Stripe Debug] Componente montado');
     console.log('🔵 [Stripe Debug] Props:', { viaje: props.viaje, stripe_key: props.stripe_key, stripe_data: props.stripe_data });
+    console.log('🔵 [Moneda Debug] viaje.moneda:', props.viaje?.moneda);
+    console.log('🔵 [Moneda Debug] viaje.precio:', props.viaje?.precio);
+    console.log('🔵 [Moneda Debug] monedaViaje computed:', monedaViaje.value);
+    console.log('🔵 [Moneda Debug] simboloMoneda computed:', simboloMoneda.value);
     
     if (props.viaje?.id) {
         try {
@@ -551,60 +551,7 @@ const formatearFecha = (fecha) => {
                             {{ form.errors.metodo_pago }}
                         </p>
                     </div>
-
-                    <!-- Información de Moneda (solo para Stripe) -->
-                    <div v-if="form.metodo_pago === 'Stripe'" class="p-6 rounded-lg border-2 border-blue-200 bg-blue-50">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="text-3xl">💳</div>
-                            <div>
-                                <h3 class="font-semibold text-lg" style="color: var(--text-primary)">Información de Pago</h3>
-                                <p class="text-sm" style="color: var(--text-secondary)">Tu moneda basada en tu país de registro</p>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-lg p-4 border border-blue-200">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-medium" style="color: var(--text-secondary)">País:</span>
-                                <span class="font-semibold" style="color: var(--text-primary)">{{ paisUsuario }}</span>
-                            </div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-medium" style="color: var(--text-secondary)">Moneda:</span>
-                                <span class="font-semibold" style="color: var(--text-primary)">{{ monedaUsuario }}</span>
-                            </div>
-                            <div class="flex items-center justify-between pt-2 border-t border-blue-200">
-                                <span class="text-base font-medium" style="color: var(--text-secondary)">Total a Pagar:</span>
-                                <span class="text-2xl font-bold text-green-600">{{ simboloMoneda }} {{ montoBob.toFixed(2) }}</span>
-                            </div>
-                        </div>
-                        <p class="mt-3 text-xs italic text-blue-700 flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                            </svg>
-                            <span>La moneda se determinó automáticamente según tu país de registro</span>
-                        </p>
-                    </div>
-
-                    <!-- Panel de Depuración (solo en desarrollo) -->
-                    <div v-if="form.metodo_pago === 'Stripe'" class="p-4 rounded-lg border-2 border-yellow-400 bg-yellow-50">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-lg">🔍</span>
-                            <h4 class="font-semibold text-yellow-800">Estado de Stripe (Debug)</h4>
-                        </div>
-                        <div class="space-y-1 text-xs font-mono text-yellow-900">
-                            <div><strong>Estado:</strong> {{ estadoDebug }}</div>
-                            <div><strong>Stripe inicializado:</strong> {{ !!stripe ? '✅ Sí' : '❌ No' }}</div>
-                            <div><strong>ClientSecret:</strong> {{ clientSecret ? '✅ Sí (' + clientSecret.substring(0, 20) + '...)' : '❌ No' }}</div>
-                            <div><strong>Elements creado:</strong> {{ !!elements ? '✅ Sí' : '❌ No' }}</div>
-                            <div><strong>Card montado:</strong> {{ !!cardElement ? '✅ Sí' : '❌ No' }}</div>
-                            <div><strong>Procesando:</strong> {{ procesandoStripe ? '⏳ Sí' : '❌ No' }}</div>
-                            <div><strong>Asiento:</strong> {{ form.asiento || '❌ No seleccionado' }}</div>
-                            <div><strong>País:</strong> {{ paisUsuario }}</div>
-                            <div><strong>Moneda:</strong> {{ monedaUsuario }}</div>
-                            <div v-if="errorStripe" class="text-red-600"><strong>Error:</strong> {{ errorStripe }}</div>
-                        </div>
-                        <div class="mt-2 text-xs text-yellow-700">
-                            💡 Abre la consola (F12) para ver logs detallados
-                        </div>
-                    </div>
+                 
 
                     <!-- Formulario de Stripe (solo si seleccionó Stripe y ya hay PaymentIntent) -->
                     <div v-if="mostrarFormularioStripe && clientSecret" class="space-y-4">
@@ -641,12 +588,6 @@ const formatearFecha = (fecha) => {
                                 <span style="color: var(--text-secondary)">Método de Pago:</span>
                                 <span class="font-medium" style="color: var(--text-primary)">
                                     {{ form.metodo_pago === 'QR' ? 'QR (PagoFácil)' : form.metodo_pago === 'Stripe' ? 'Tarjeta (Stripe)' : 'No seleccionado' }}
-                                </span>
-                            </div>
-                            <div v-if="form.metodo_pago === 'Stripe'" class="flex justify-between">
-                                <span style="color: var(--text-secondary)">Moneda:</span>
-                                <span class="font-medium" style="color: var(--text-primary)">
-                                    {{ monedaUsuario }} ({{ paisUsuario }})
                                 </span>
                             </div>
                             <div class="flex justify-between pt-2 border-t" style="border-color: var(--border-color)">

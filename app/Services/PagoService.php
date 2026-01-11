@@ -35,7 +35,10 @@ class PagoService
                 'fecha_pago' => $data['fecha_pago'] ?? now(),
                 'monto' => $data['monto'],
                 'metodo_pago' => $data['metodo_pago'],
+                'moneda' => $data['moneda'] ?? 'BOB',
+                'monto_usd' => $data['monto_usd'] ?? null,
                 'qr_base64' => $data['qr_base64'] ?? null,
+                'payment_intent_id' => $data['payment_intent_id'] ?? null,
                 'estado_pago' => $data['estado_pago'] ?? 'Pagado',
             ]);
 
