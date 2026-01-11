@@ -103,6 +103,15 @@ class Usuario extends Authenticatable implements MustVerifyEmail
         $this->attributes['correo'] = $value;
     }
 
+    /**
+     * Get the email address for password reset.
+     * Laravel busca este método para saber qué campo usar para reset
+     */
+    public function getEmailForPasswordReset()
+    {
+        return $this->correo;
+    }
+
     // Accessor para obtener la URL completa de la imagen
     protected function imgUrlFull(): Attribute
     {
