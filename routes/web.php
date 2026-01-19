@@ -83,6 +83,9 @@ Route::middleware('auth')->group(function () {
         
         // Estadísticas
         Route::get('/estadisticas', [\App\Http\Controllers\EstadisticaController::class, 'index'])->name('estadisticas.index');
+        
+        // Métricas de Visitas
+        Route::get('/metricas', [\App\Http\Controllers\MetricasController::class, 'index'])->name('metricas.index');
     });
 
     // Rutas para Cliente (requiere email verificado)

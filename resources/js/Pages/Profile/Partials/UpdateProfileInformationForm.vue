@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import PaisDropdown from '@/Components/PaisDropdown.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { PAISES } from '@/utils/paises.js';
 
@@ -46,6 +47,14 @@ const form = useForm({
 
 const avatarPreview = ref(user?.img_url_full || null);
 const fileInput = ref(null);
+
+// Auto-actualizar código telefónico cuando cambia el país
+watch(() => form.pais, (nuevoPais) => {
+    const pais = PAISES.find(p => p.nombre === nuevoPais);
+    if (pais) {
+        form.codigo_pais_telefono = pais.codigo;
+    }
+});
 
 const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -132,8 +141,7 @@ const submit = () => {
                     type="text"
                     class="mt-1 block w-full"
                     v-model="form.name"
-                    required
-                    autofocus
+                    readonly
                     autocomplete="name"
                 />
 
@@ -149,7 +157,7 @@ const submit = () => {
                     type="email"
                     class="mt-1 block w-full"
                     v-model="form.email"
-                    required
+                    readonly
                     autocomplete="username"
                 />
 
@@ -160,16 +168,16 @@ const submit = () => {
             <div>
                 <InputLabel for="pais" value="País" />
 
-                <select
-                    id="pais"
-                    v-model="form.pais"
-                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                >
-                    <option value="">Selecciona un país</option>
-                    <option v-for="pais in PAISES" :key="pais.iso" :value="pais.nombre">
-                        {{ pais.nombre }}
-                    </option>
-                </select>
+                <div class="mt-1 flex items-center gap-3 px-3 py-2 rounded-md shadow-sm border border-gray-300 bg-gray-50">
+                    <span 
+                        :class="`fi fi-${PAISES.find(p => p.nombre === form.pais)?.iso?.toLowerCase()}`"
+                        class="text-2xl flex-shrink-0"
+                        aria-hidden="true"
+                    ></span>
+                    <span class="text-gray-700">
+                        {{ form.pais }}
+                    </span>
+                </div>
 
                 <InputError class="mt-2" :message="form.errors.pais" />
             </div>
@@ -183,6 +191,7 @@ const submit = () => {
                     type="text"
                     class="mt-1 block w-full"
                     v-model="form.ci"
+                    readonly
                     autocomplete="off"
                     placeholder="CI, DNI, Pasaporte, etc."
                 />
@@ -198,20 +207,26 @@ const submit = () => {
                 <InputLabel for="telefono" value="Teléfono" />
 
                 <div class="mt-1 flex gap-2">
-                    <select
-                        v-model="form.codigo_pais_telefono"
-                        class="w-32 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                    <!-- Código telefónico (solo lectura, automático según país) -->
+                    <div 
+                        class="flex items-center gap-2 px-3 py-2 rounded-md shadow-sm border border-gray-300 w-[120px] flex-shrink-0 bg-gray-50"
                     >
-                        <option v-for="pais in PAISES" :key="pais.codigo" :value="pais.codigo">
-                            {{ pais.codigo }} {{ pais.iso }}
-                        </option>
-                    </select>
+                        <span 
+                            :class="`fi fi-${PAISES.find(p => p.codigo === form.codigo_pais_telefono)?.iso?.toLowerCase()}`"
+                            class="text-xl flex-shrink-0"
+                            aria-hidden="true"
+                        ></span>
+                        <span class="text-xs font-medium text-gray-700">
+                            {{ form.codigo_pais_telefono }}
+                        </span>
+                    </div>
 
                     <TextInput
                         id="telefono"
                         type="tel"
                         class="flex-1"
                         v-model="form.telefono"
+                        readonly
                         autocomplete="tel"
                         placeholder="70123456"
                     />
@@ -288,24 +303,6 @@ const submit = () => {
                 >
                     Se ha enviado un nuevo enlace de verificación a tu correo electrónico.
                 </div>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Guardar</PrimaryButton>
-
-                <Transition
-                    enter-active-class="transition ease-in-out"
-                    enter-from-class="opacity-0"
-                    leave-active-class="transition ease-in-out"
-                    leave-to-class="opacity-0"
-                >
-                    <p
-                        v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600"
-                    >
-                        Guardado.
-                    </p>
-                </Transition>
             </div>
         </form>
     </section>

@@ -145,7 +145,7 @@ class StripeService
                     'monto_original' => $montoPrecio,
                     'monto_usd' => $montoUsd,
                 ],
-                'description' => "Pago venta #{$pagoVenta->venta_id} - TransComarapa",
+                'description' => "Pago venta #{$pagoVenta->venta_id} - TransPorta",
             ]);
 
             // Guardar payment_intent_id en la base de datos

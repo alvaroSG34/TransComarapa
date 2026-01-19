@@ -24,7 +24,7 @@ onMounted(() => {
 
 <template>
 
-    <Head title="TransComarapa - Pasajes y Encomiendas" />
+    <Head title="TransPorta - Pasajes y Encomiendas" />
 
     <div :class="themeClasses" class="min-h-screen" style="background-color: var(--bg-primary);">
         <!-- Navigation Bar Mejorado -->
@@ -40,7 +40,7 @@ onMounted(() => {
                     <div class="flex items-center gap-2">
                         <span class="text-2xl" aria-hidden="true">🚌</span>
                         <span class="font-bold text-lg" style="color: var(--primary-600);">
-                            TransComarapa
+                            TransPorta
                         </span>
                     </div>
 
@@ -110,7 +110,7 @@ onMounted(() => {
                         </h1>
 
                         <p class="text-lg md:text-xl max-w-xl mx-auto md:mx-0" style="color: var(--text-secondary);">
-                            Viaja seguro y cómodo con TransComarapa. Conectamos Santa Cruz con los
+                            Viaja seguro y cómodo con TransPorta. Conectamos Santa Cruz con los
                             mejores destinos de Bolivia, las 24 horas del día.
                         </p>
 
@@ -149,7 +149,7 @@ onMounted(() => {
                     <!-- Columna imagen -->
                     <div class="relative flex justify-center md:justify-end">
                         <div class="hero-bus-card">
-                            <img :src="busImage" alt="Bus TransComarapa" class="w-full h-full object-cover rounded-2xl" />
+                            <img :src="busImage" alt="Bus TransPorta" class="w-full h-full object-cover rounded-2xl" />
 
                             <div class="absolute -bottom-4 -left-4 px-4 py-3 rounded-xl text-sm shadow-md hidden sm:flex flex-col"
                                 style="
@@ -305,10 +305,10 @@ onMounted(() => {
                     <div class="mb-4 md:mb-0">
                         <div class="flex items-center space-x-2">
                             <span class="text-2xl">🚌</span>
-                            <span class="font-bold" style="color: var(--primary-600);">TransComarapa</span>
+                            <span class="font-bold" style="color: var(--primary-600);">TransPorta</span>
                         </div>
                         <p class="text-sm mt-1" style="color: var(--text-tertiary);">
-                            © 2025 TransComarapa. Todos los derechos reservados.
+                            © 2025 TransPorta. Todos los derechos reservados.
                         </p>
                     </div>
                     <div class="flex space-x-6">

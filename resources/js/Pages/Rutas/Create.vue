@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
+import PaisDropdown from '@/Components/PaisDropdown.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useValidation } from '@/composables/useValidation';
 import { PAISES } from '@/utils/paises.js';
@@ -148,23 +149,12 @@ const handleInput = (field) => {
                                 <label for="pais_operacion" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
                                     País de Operación *
                                 </label>
-                                <select
-                                    id="pais_operacion"
+                                <PaisDropdown
                                     v-model="form.pais_operacion"
+                                    :paises="PAISES"
+                                    :error="clientErrors.pais_operacion || form.errors.pais_operacion"
                                     @change="actualizarMoneda(); handleInput('pais_operacion')"
-                                    class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-                                    :class="(form.errors.pais_operacion || clientErrors.pais_operacion) ? 'border-red-500 focus:ring-red-500' : ''"
-                                    style="
-                                        background-color: var(--bg-primary);
-                                        color: var(--text-primary);
-                                        border-color: var(--border-primary);
-                                    "
-                                >
-                                    <option value="" disabled>Seleccione un país</option>
-                                    <option v-for="pais in PAISES" :key="pais.iso" :value="pais.nombre">
-                                        {{ pais.nombre }} ({{ pais.simbolo }} {{ pais.moneda }})
-                                    </option>
-                                </select>
+                                />
                                 <p class="mt-1 text-xs" style="color: var(--text-tertiary);">
                                     Esto define la moneda en la que operará esta ruta
                                 </p>

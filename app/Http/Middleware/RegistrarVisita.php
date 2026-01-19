@@ -56,6 +56,22 @@ class RegistrarVisita
     private function registrarVisita(Request $request): void
     {
         try {
+            // Solo registrar visitas de usuarios con rol 'Cliente'
+            // Los usuarios no autenticados (guests) y otros roles (Admin, Secretaria, Conductor) no cuentan
+            if (auth()->check() && auth()->user()->rol !== 'Cliente') {
+                Log::info('RegistrarVisita: Usuario autenticado pero no es Cliente, omitiendo registro', [
+                    'usuario_id' => auth()->id(),
+                    'rol' => auth()->user()->rol,
+                ]);
+                return;
+            }
+            
+            // Tampoco registrar visitas de invitados (guests)
+            if (!auth()->check()) {
+                Log::info('RegistrarVisita: Usuario invitado (no autenticado), omitiendo registro');
+                return;
+            }
+            
             // $request->path() ya devuelve la ruta sin el dominio, pero sin el "/" inicial
             // Necesitamos normalizarla
             $ruta = $request->path();
@@ -84,7 +100,35 @@ class RegistrarVisita
                 'usuario_id' => auth()->id(),
             ]);
 
-            // Registrar la visita
+            // Verificar si ya existe una visita hoy
+            $usuarioId = auth()->id();
+            $ipAddress = $request->ip();
+            
+            $query = Visita::where('ruta', $rutaNormalizada)
+                ->whereDate('created_at', today());
+            
+            // Si está autenticado, filtrar por usuario_id
+            // Si es invitado, filtrar por IP
+            if ($usuarioId) {
+                $query->where('usuario_id', $usuarioId);
+            } else {
+                $query->where('ip_address', $ipAddress)
+                     ->whereNull('usuario_id');
+            }
+            
+            $visitaExistente = $query->exists();
+            
+            if ($visitaExistente) {
+                Log::info('RegistrarVisita: Ya existe una visita hoy, omitiendo registro', [
+                    'ruta' => $rutaNormalizada,
+                    'usuario_id' => $usuarioId,
+                    'ip_address' => $ipAddress,
+                    'fecha' => today()->toDateString(),
+                ]);
+                return;
+            }
+
+            // Registrar la visita (solo si no existe una hoy)
             $visita = Visita::create([
                 'ruta' => $rutaNormalizada,
                 'ip_address' => $request->ip(),
