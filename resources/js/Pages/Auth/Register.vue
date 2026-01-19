@@ -1,10 +1,12 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
+import PaisDropdown from '@/Components/PaisDropdown.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useHtml5Validation } from '@/composables/useHtml5Validation';
 import { useValidation } from '@/composables/useValidation';
 import { PAISES } from '@/utils/paises.js';
+import { watch } from 'vue';
 
 // Activar validaciones HTML5 en español (opcional)
 // useHtml5Validation();
@@ -62,18 +64,26 @@ const handleInput = (field) => {
     clearError(field);
     form.clearErrors(field);
 };
+
+// Auto-actualizar código telefónico cuando cambia el país
+watch(() => form.pais, (nuevoPais) => {
+    const pais = PAISES.find(p => p.nombre === nuevoPais);
+    if (pais) {
+        form.codigo_pais_telefono = pais.codigo;
+    }
+});
 </script>
 
 <template>
     <GuestLayout>
-        <Head title="Registrarse - TransComarapa" />
+        <Head title="Registrarse - TransPorta" />
 
         <div class="w-full mx-auto">
             <!-- Header -->
             <div class="text-center mb-8">
                 <div class="flex items-center justify-center gap-2 mb-3">
                     <span class="text-4xl">🚌</span>
-                    <h1 class="text-2xl font-bold" style="color: var(--primary-600);">TransComarapa</h1>
+                    <h1 class="text-2xl font-bold" style="color: var(--primary-600);">TransPorta</h1>
                 </div>
                 <h2 class="text-xl font-semibold" style="color: var(--text-primary);">Crear Cuenta</h2>
                 <p class="text-sm mt-2" style="color: var(--text-secondary);">
@@ -138,22 +148,12 @@ const handleInput = (field) => {
                     <label for="pais" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
                         País
                     </label>
-                    <select
-                        id="pais"
+                    <PaisDropdown
                         v-model="form.pais"
+                        :paises="PAISES"
+                        :error="clientErrors.pais || form.errors.pais"
                         @change="handleInput('pais')"
-                        class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-                        :class="(form.errors.pais || clientErrors.pais) ? 'border-red-500 focus:ring-red-500' : ''"
-                        style="
-                            background-color: var(--bg-secondary);
-                            color: var(--text-primary);
-                            border-color: var(--border-primary);
-                        "
-                    >
-                        <option v-for="pais in PAISES" :key="pais.iso" :value="pais.nombre">
-                            {{ pais.nombre }}
-                        </option>
-                    </select>
+                    />
                     <InputError class="mt-2" :message="clientErrors.pais || form.errors.pais" />
                 </div>
 
@@ -190,19 +190,25 @@ const handleInput = (field) => {
                             Teléfono
                         </label>
                         <div class="flex gap-2">
-                            <select
-                                v-model="form.codigo_pais_telefono"
-                                class="w-[80px] py-3 text-xs rounded-lg border transition-all focus:outline-none focus:ring-2"
+                            <!-- Código telefónico (solo lectura, automático según país) -->
+                            <div 
+                                class="flex items-center gap-2 px-3 py-3 rounded-lg border flex-shrink-0"
                                 style="
                                     background-color: var(--bg-secondary);
                                     color: var(--text-primary);
                                     border-color: var(--border-primary);
+                                    opacity: 1;
                                 "
                             >
-                                <option v-for="pais in PAISES" :key="pais.codigo" :value="pais.codigo">
-                                    {{ pais.codigo }}
-                                </option>
-                            </select>
+                                <span 
+                                    :class="`fi fi-${PAISES.find(p => p.codigo === form.codigo_pais_telefono)?.iso?.toLowerCase()}`"
+                                    class="text-xl flex-shrink-0"
+                                    aria-hidden="true"
+                                ></span>
+                                <span class="text-xs font-medium" style="color: var(--text-primary);">
+                                    {{ form.codigo_pais_telefono }}
+                                </span>
+                            </div>
                             <input
                                 id="telefono"
                                 type="tel"

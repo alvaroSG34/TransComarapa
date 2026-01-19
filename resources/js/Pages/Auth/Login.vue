@@ -220,7 +220,7 @@ const submit = () => {
             <!-- Footer -->
             <div class="text-center mt-6">
                 <p class="text-xs text-muted-foreground">
-                    © {{ new Date().getFullYear() }} TransComarapa. Todos los
+                    © {{ new Date().getFullYear() }} TransPorta. Todos los
                     derechos reservados.
                 </p>
             </div>

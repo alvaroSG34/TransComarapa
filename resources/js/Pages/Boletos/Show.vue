@@ -91,7 +91,7 @@ const imprimirTicket = () => {
         <body>
             <div class="ticket">
                 <div class="centrado">
-                    <div class="titulo">TRANSCOMARAPA</div>
+                    <div class="titulo">TransPorta</div>
                     <div class="subtitulo">COMPROBANTE DE BOLETO</div>
                     <div class="separador"></div>
                 </div>
