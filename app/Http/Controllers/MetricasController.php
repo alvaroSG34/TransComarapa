@@ -57,12 +57,48 @@ class MetricasController extends Controller
             ->orderBy('total', 'desc')
             ->get();
 
+        // 6. Detalles de visitas a rutas principales (con información de usuario, IP, fecha, hora)
+        // Paginación para evitar tablas muy largas
+        $paginaDetalle = $request->input('pagina_detalle', 1);
+        $porPagina = 50; // Mostrar 50 visitas por página
+        
+        $queryDetalle = Visita::with('usuario:id,nombre,correo,rol')
+            ->whereIn('ruta', ['/', '/dashboard', '/login', '/register'])
+            ->whereBetween('created_at', [$inicio, $fin])
+            ->orderBy('created_at', 'desc');
+        
+        $totalVisitasDetalle = $queryDetalle->count();
+        $totalPaginasDetalle = ceil($totalVisitasDetalle / $porPagina);
+        
+        $rutasPrincipalesDetalle = $queryDetalle
+            ->skip(($paginaDetalle - 1) * $porPagina)
+            ->take($porPagina)
+            ->get()
+            ->map(function ($visita) {
+                return [
+                    'ruta' => $visita->ruta,
+                    'usuario_nombre' => $visita->usuario ? $visita->usuario->nombre : 'Invitado',
+                    'usuario_email' => $visita->usuario ? $visita->usuario->correo : '-',
+                    'ip_address' => $visita->ip_address,
+                    'fecha' => Carbon::parse($visita->created_at)->format('d/m/Y'),
+                    'hora' => Carbon::parse($visita->created_at)->format('H:i:s'),
+                    'timestamp' => $visita->created_at->toDateTimeString(),
+                ];
+            });
+
         return Inertia::render('Metricas/Index', [
             'totalVisitas' => $totalVisitas,
             'visitasRango' => $visitasRango,
             'visitasPorDia' => $visitasPorDia,
             'visitasPorRuta' => $visitasPorRuta,
             'todasLasRutas' => $todasLasRutas,
+            'rutasPrincipalesDetalle' => $rutasPrincipalesDetalle,
+            'paginacionDetalle' => [
+                'pagina_actual' => (int)$paginaDetalle,
+                'total_paginas' => $totalPaginasDetalle,
+                'total_registros' => $totalVisitasDetalle,
+                'por_pagina' => $porPagina,
+            ],
             'filtros' => [
                 'fecha_inicio' => $fechaInicio,
                 'fecha_fin' => $fechaFin,

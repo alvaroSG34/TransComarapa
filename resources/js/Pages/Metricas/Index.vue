@@ -13,6 +13,8 @@ const props = defineProps({
     visitasPorDia: Array,
     visitasPorRuta: Array,
     todasLasRutas: Array,
+    rutasPrincipalesDetalle: Array,
+    paginacionDetalle: Object,
     filtros: Object,
 });
 
@@ -25,9 +27,7 @@ const busqueda = ref('');
 
 // Gráfico
 const chartCanvas = ref(null);
-const barChartCanvas = ref(null);
 let chartInstance = null;
-let barChartInstance = null;
 
 // Rutas importantes para análisis
 const rutasImportantes = ['/', '//', '/login', '/register', '/dashboard'];
@@ -86,6 +86,18 @@ const establecerFiltroRapido = (dias) => {
     aplicarFiltros();
 };
 
+// Cambiar página de detalle
+const cambiarPaginaDetalle = (pagina) => {
+    router.get(route('metricas.index'), {
+        fecha_inicio: fechaInicio.value,
+        fecha_fin: fechaFin.value,
+        pagina_detalle: pagina,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
 // Crear gráfico de línea
 const crearGrafico = () => {
     if (chartInstance) {
@@ -132,59 +144,6 @@ const crearGrafico = () => {
     });
 };
 
-// Crear gráfico de barras para top 20
-const crearGraficoBarras = () => {
-    if (barChartInstance) {
-        barChartInstance.destroy();
-    }
-
-    const ctx = barChartCanvas.value.getContext('2d');
-    
-    barChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: props.visitasPorRuta.map(item => item.ruta),
-            datasets: [{
-                label: 'Visitas',
-                data: props.visitasPorRuta.map(item => item.total),
-                backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                borderColor: 'rgb(59, 130, 246)',
-                borderWidth: 1,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false,
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return 'Visitas: ' + context.parsed.y.toLocaleString();
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                },
-                x: {
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
-                }
-            }
-        }
-    });
-};
-
 // Exportar datos a CSV
 const exportarCSV = () => {
     const headers = ['Ruta', 'Visitas'];
@@ -209,7 +168,6 @@ const exportarCSV = () => {
 
 onMounted(() => {
     crearGrafico();
-    crearGraficoBarras();
 });
 </script>
 
@@ -357,16 +315,6 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Gráfico de Top 20 Rutas -->
-                <div class="overflow-hidden shadow-sm sm:rounded-lg p-6" style="background-color: var(--bg-secondary);">
-                    <h3 class="text-lg font-semibold mb-4" style="color: var(--text-primary);">
-                        Top 20 Rutas Más Visitadas
-                    </h3>
-                    <div class="h-[500px]">
-                        <canvas ref="barChartCanvas"></canvas>
-                    </div>
-                </div>
-
                 <!-- Tabla de Rutas Principales -->
                 <div class="overflow-hidden shadow-sm sm:rounded-lg p-6" style="background-color: var(--bg-secondary);">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
@@ -417,6 +365,95 @@ onMounted(() => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Tabla Detallada de Visitas a Rutas Principales -->
+                <div class="overflow-hidden shadow-sm sm:rounded-lg p-6" style="background-color: var(--bg-secondary);">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">
+                                 Detalle de Visitas a Rutas Principales (Clientes)
+                            </h3>
+                            <p class="text-sm mt-1" style="color: var(--text-secondary);">
+                                Mostrando {{ rutasPrincipalesDetalle.length }} de {{ paginacionDetalle.total_registros }} registros
+                            </p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-primary);">
+                                    <th class="text-left py-3 px-4 text-sm font-semibold" style="color: var(--text-primary);">Ruta</th>
+                                    <th class="text-left py-3 px-4 text-sm font-semibold" style="color: var(--text-primary);">Usuario</th>
+                                    <th class="text-left py-3 px-4 text-sm font-semibold" style="color: var(--text-primary);">Email</th>
+                                    <th class="text-left py-3 px-4 text-sm font-semibold" style="color: var(--text-primary);">IP</th>
+                                    <th class="text-left py-3 px-4 text-sm font-semibold" style="color: var(--text-primary);">Fecha</th>
+                                    <th class="text-left py-3 px-4 text-sm font-semibold" style="color: var(--text-primary);">Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="(visita, index) in rutasPrincipalesDetalle"
+                                    :key="index"
+                                    class="border-b hover:bg-opacity-50 transition-colors"
+                                    style="border-color: var(--border-primary);"
+                                >
+                                    <td class="py-3 px-4 text-sm font-mono font-medium" style="color: var(--primary-600);">
+                                        {{ visita.ruta }}
+                                    </td>
+                                    <td class="py-3 px-4 text-sm" style="color: var(--text-primary);">
+                                        {{ visita.usuario_nombre }}
+                                    </td>
+                                    <td class="py-3 px-4 text-sm" style="color: var(--text-secondary);">
+                                        {{ visita.usuario_email }}
+                                    </td>
+                                    <td class="py-3 px-4 text-sm font-mono" style="color: var(--text-secondary);">
+                                        {{ visita.ip_address }}
+                                    </td>
+                                    <td class="py-3 px-4 text-sm" style="color: var(--text-primary);">
+                                        {{ visita.fecha }}
+                                    </td>
+                                    <td class="py-3 px-4 text-sm font-mono" style="color: var(--accent-color);">
+                                        {{ visita.hora }}
+                                    </td>
+                                </tr>
+                                <tr v-if="rutasPrincipalesDetalle.length === 0">
+                                    <td colspan="6" class="py-8 text-center text-sm" style="color: var(--text-secondary);">
+                                        No hay visitas registradas en el rango de fechas seleccionado
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Controles de Paginación -->
+                    <div v-if="paginacionDetalle.total_paginas > 1" class="flex justify-between items-center mt-6 pt-4" style="border-top: 1px solid var(--border-primary);">
+                        <button
+                            @click="cambiarPaginaDetalle(paginacionDetalle.pagina_actual - 1)"
+                            :disabled="paginacionDetalle.pagina_actual === 1"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                            :class="paginacionDetalle.pagina_actual === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'"
+                            style="background-color: var(--primary-600); color: white;"
+                        >
+                            ← Anterior
+                        </button>
+                        
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm" style="color: var(--text-secondary);">
+                                Página {{ paginacionDetalle.pagina_actual }} de {{ paginacionDetalle.total_paginas }}
+                            </span>
+                        </div>
+                        
+                        <button
+                            @click="cambiarPaginaDetalle(paginacionDetalle.pagina_actual + 1)"
+                            :disabled="paginacionDetalle.pagina_actual === paginacionDetalle.total_paginas"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                            :class="paginacionDetalle.pagina_actual === paginacionDetalle.total_paginas ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'"
+                            style="background-color: var(--primary-600); color: white;"
+                        >
+                            Siguiente →
+                        </button>
                     </div>
                 </div>
 

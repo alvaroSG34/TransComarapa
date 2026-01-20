@@ -135,20 +135,6 @@ const isCliente = computed(() => userRole.value === 'Cliente');
                         </Link>
                         
                         <Link 
-                            :href="route('ventas.index')" 
-                            class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
-                            style="background: linear-gradient(135deg, var(--secondary-600), var(--secondary-500)); border: 2px solid transparent;"
-                        >
-                            <div class="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" 
-                                 style="background-color: white; transform: translate(30%, -30%);"></div>
-                            <div class="relative z-10">
-                                <div class="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">💰</div>
-                                <div class="font-bold text-xl mb-2">Ventas</div>
-                                <div class="text-sm opacity-90">Ver historial de ventas</div>
-                            </div>
-                        </Link>
-                        
-                        <Link 
                             :href="route('clientes.index')" 
                             class="group relative overflow-hidden rounded-xl p-6 text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white hover:border-opacity-30"
                             style="background: linear-gradient(135deg, var(--primary-500), var(--primary-600)); border: 2px solid transparent;"

@@ -256,18 +256,36 @@ class ClienteBoletoController extends Controller
 
         $validated = $request->validate([
             'viaje_id' => 'required|exists:viajes,id',
-            'asiento' => 'required|integer|min:1',
+            'asientos' => 'required|array|min:1',
+            'asientos.*' => 'required|integer|min:1',
             'metodo_pago' => 'required|in:QR,Stripe',
         ]);
 
-        // Lock atómico para prevenir condiciones de carrera
-        $lockKey = "asiento_compra_{$validated['viaje_id']}_{$validated['asiento']}";
-        $lock = Cache::lock($lockKey, 10); // 10 segundos de timeout
-
-        if (!$lock->get()) {
+        // Validar que no haya más de 10 asientos en una compra
+        if (count($validated['asientos']) > 10) {
             return back()->withErrors([
-                'asiento' => 'Este asiento está siendo procesado por otro usuario. Por favor, intente nuevamente en unos segundos o seleccione otro asiento.'
+                'asientos' => 'No puede comprar más de 10 boletos en una sola transacción.'
             ])->withInput();
+        }
+
+        // Lock atómico para todos los asientos
+        $locks = [];
+        foreach ($validated['asientos'] as $asiento) {
+            $lockKey = "asiento_compra_{$validated['viaje_id']}_{$asiento}";
+            $lock = Cache::lock($lockKey, 10);
+            
+            if (!$lock->get()) {
+                // Liberar locks ya adquiridos
+                foreach ($locks as $acquiredLock) {
+                    $acquiredLock->release();
+                }
+                
+                return back()->withErrors([
+                    'asientos' => 'Uno de los asientos seleccionados está siendo procesado por otro usuario. Por favor, intente nuevamente.'
+                ])->withInput();
+            }
+            
+            $locks[] = $lock;
         }
 
         try {
@@ -275,7 +293,9 @@ class ClienteBoletoController extends Controller
             $cliente = $request->user();
             
             if (!$cliente) {
-                $lock->release();
+                foreach ($locks as $lock) {
+                    $lock->release();
+                }
                 return back()->withErrors([
                     'error' => 'Debe estar autenticado para realizar una compra.'
                 ])->withInput();
@@ -285,7 +305,9 @@ class ClienteBoletoController extends Controller
             $viaje = $this->viajeRepository->find($validated['viaje_id']);
             
             if (!$viaje || $viaje->estado !== 'programado') {
-                $lock->release();
+                foreach ($locks as $lock) {
+                    $lock->release();
+                }
                 return back()->withErrors([
                     'viaje_id' => 'El viaje no está disponible para venta.'
                 ])->withInput();
@@ -294,51 +316,68 @@ class ClienteBoletoController extends Controller
             // Validar que la fecha y hora de salida no hayan pasado
             $fechaSalida = \Carbon\Carbon::parse($viaje->fecha_salida);
             if (!$fechaSalida->isFuture()) {
-                $lock->release();
+                foreach ($locks as $lock) {
+                    $lock->release();
+                }
                 return back()->withErrors([
                     'viaje_id' => 'El viaje seleccionado no está disponible porque su fecha y hora de salida ya pasaron.'
                 ])->withInput();
             }
 
-            // Verificar asientos disponibles
+            // Verificar cantidad de asientos disponibles
             $boletosVendidos = DB::table('boletos')
                 ->where('viaje_id', $viaje->id)
                 ->count();
             
-            if ($boletosVendidos >= $viaje->asientos_totales) {
-                $lock->release();
+            $asientosDisponibles = $viaje->asientos_totales - $boletosVendidos;
+            
+            if ($asientosDisponibles < count($validated['asientos'])) {
+                foreach ($locks as $lock) {
+                    $lock->release();
+                }
                 return back()->withErrors([
-                    'asiento' => 'No hay asientos disponibles en este viaje.'
+                    'asientos' => "Solo hay {$asientosDisponibles} asiento(s) disponible(s) en este viaje."
                 ])->withInput();
             }
 
-            // Verificar que el asiento no esté ocupado
-            $asientoOcupado = DB::table('boletos')
+            // Verificar que ninguno de los asientos esté ocupado
+            $asientosOcupados = DB::table('boletos')
                 ->where('viaje_id', $viaje->id)
-                ->where('asiento', $validated['asiento'])
-                ->exists();
+                ->whereIn('asiento', $validated['asientos'])
+                ->pluck('asiento')
+                ->toArray();
 
-            if ($asientoOcupado) {
-                $lock->release();
+            if (count($asientosOcupados) > 0) {
+                foreach ($locks as $lock) {
+                    $lock->release();
+                }
+                $asientosStr = implode(', ', $asientosOcupados);
                 return back()->withErrors([
-                    'asiento' => 'El asiento número ' . $validated['asiento'] . ' ya está ocupado. Por favor seleccione otro asiento.'
+                    'asientos' => "Los siguientes asientos ya están ocupados: {$asientosStr}. Por favor seleccione otros asientos."
                 ])->withInput();
             }
 
-            return DB::transaction(function () use ($validated, $viaje, $cliente, $lock) {
+            return DB::transaction(function () use ($validated, $viaje, $cliente, $locks) {
+                // Preparar array de boletos
+                $boletos = [];
+                foreach ($validated['asientos'] as $asiento) {
+                    $boletos[] = [
+                        'asiento' => $asiento,
+                        'ruta_id' => $viaje->ruta_id,
+                        'viaje_id' => $viaje->id
+                    ];
+                }
+                
+                // Calcular monto total (precio unitario * cantidad de asientos)
+                $montoTotal = $viaje->precio * count($validated['asientos']);
+                
                 // Crear venta usando el servicio
                 $ventaData = [
                     'fecha' => now(),
-                    'monto_total' => $viaje->precio,
+                    'monto_total' => $montoTotal,
                     'usuario_id' => $cliente->id,
                     'vehiculo_id' => $viaje->vehiculo_id,
-                    'boletos' => [
-                        [
-                            'asiento' => $validated['asiento'],
-                            'ruta_id' => $viaje->ruta_id,
-                            'viaje_id' => $viaje->id
-                        ]
-                    ]
+                    'boletos' => $boletos
                 ];
 
                 $venta = $this->ventaService->crearVentaBoleto($ventaData);
@@ -369,14 +408,20 @@ class ClienteBoletoController extends Controller
                         $qrData = [
                             'qr_base64' => $resultadoQr['pago_venta']->qr_base64,
                             'transaction_id' => $resultadoQr['pago_venta']->transaction_id,
-                            'boleto_id' => $venta->boletos->first()->id,
+                            'boleto_ids' => $venta->boletos->pluck('id')->toArray(),
                         ];
 
                         Log::info('QR generado exitosamente para cliente', [
                             'venta_id' => $venta->id,
                             'pago_venta_id' => $pagoVenta->id,
+                            'cantidad_boletos' => count($venta->boletos),
                         ]);
                     } catch (\Exception $e) {
+                        // Liberar todos los locks en caso de error
+                        foreach ($locks as $lock) {
+                            $lock->release();
+                        }
+                        
                         Log::error('Error al generar QR para cliente', [
                             'venta_id' => $venta->id ?? null,
                             'error' => $e->getMessage(),
@@ -414,15 +459,21 @@ class ClienteBoletoController extends Controller
                             'payment_intent_id' => $resultadoStripe['payment_intent']->id,
                             'amount' => $resultadoStripe['payment_intent']->amount,
                             'currency' => $resultadoStripe['payment_intent']->currency,
-                            'boleto_id' => $venta->boletos->first()->id,
+                            'boleto_ids' => $venta->boletos->pluck('id')->toArray(),
                         ];
 
                         Log::info('PaymentIntent creado exitosamente para cliente', [
                             'venta_id' => $venta->id,
                             'pago_venta_id' => $pagoVenta->id,
                             'payment_intent_id' => $resultadoStripe['payment_intent']->id,
+                            'cantidad_boletos' => count($venta->boletos),
                         ]);
                     } catch (\Exception $e) {
+                        // Liberar todos los locks en caso de error
+                        foreach ($locks as $lock) {
+                            $lock->release();
+                        }
+                        
                         Log::error('Error al crear PaymentIntent para cliente', [
                             'venta_id' => $venta->id ?? null,
                             'error' => $e->getMessage(),
@@ -465,21 +516,30 @@ class ClienteBoletoController extends Controller
                 
                 $viajeData->asientos_disponibles = $viajeData->asientos_totales - $boletosVendidos;
 
-                // Liberar lock después de completar la transacción exitosamente
-                $lock->release();
+                // Liberar todos los locks después de completar la transacción exitosamente
+                foreach ($locks as $lock) {
+                    $lock->release();
+                }
 
+                $cantidadBoletos = count($validated['asientos']);
+                $mensaje = $cantidadBoletos === 1 
+                    ? '¡Boleto comprado exitosamente!' 
+                    : "¡{$cantidadBoletos} boletos comprados exitosamente!";
+                
                 return Inertia::render('Cliente/ComprarBoletoForm', [
                     'ruta' => $ruta,
                     'viaje' => $viajeData,
                     'qr_data' => $qrData,
                     'stripe_data' => $stripeData,
                     'stripe_key' => config('services.stripe.key'),
-                    'success' => 'Boleto comprado exitosamente!'
+                    'success' => $mensaje
                 ]);
             });
         } catch (\Exception $e) {
-            // Liberar lock en caso de error
-            $lock->release();
+            // Liberar todos los locks en caso de error
+            foreach ($locks as $lock) {
+                $lock->release();
+            }
             
             \Log::error('Error al procesar compra: ' . $e->getMessage());
             return back()->withErrors([

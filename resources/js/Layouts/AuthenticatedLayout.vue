@@ -47,7 +47,6 @@ const navigationLinks = computed(() => {
             { name: 'Viajes', route: 'viajes.index' },
             { name: 'Boletos', route: 'boletos.index' },
             { name: 'Encomiendas', route: 'encomiendas.index' },
-            { name: 'Ventas', route: 'ventas.index' },
             
             ...(role === 'Admin' ? [
                 { name: 'Vehículos', route: 'vehiculos.index' },
@@ -77,8 +76,7 @@ const menuItems = computed(() => {
             { name: 'Rutas', route: 'rutas.index', icon: '🛣️' },
             { name: 'Viajes', route: 'viajes.index', icon: '🚌' },
             { name: 'Boletos', route: 'boletos.index', icon: '🎫' },
-            { name: 'Encomiendas', route: 'encomiendas.index', icon: '📦' },
-            { name: 'Ventas', route: 'ventas.index', icon: '💰' }
+            { name: 'Encomiendas', route: 'encomiendas.index', icon: '📦' }
         );
         
         if (role === 'Admin') {

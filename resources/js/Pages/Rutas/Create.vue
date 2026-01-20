@@ -5,7 +5,7 @@ import PaisDropdown from '@/Components/PaisDropdown.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useValidation } from '@/composables/useValidation';
 import { PAISES } from '@/utils/paises.js';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const { errors: clientErrors, validate, clearError } = useValidation();
 
@@ -15,7 +15,10 @@ const form = useForm({
     destino: '',
     pais_operacion: 'Bolivia',
     moneda: 'BOB',
+    imagen: null,
 });
+
+const imagenPreview = ref(null);
 
 // Auto-completar moneda cuando cambia el país
 const paisSeleccionado = computed(() => {
@@ -26,6 +29,37 @@ const actualizarMoneda = () => {
     if (paisSeleccionado.value) {
         form.moneda = paisSeleccionado.value.moneda;
     }
+};
+
+const handleImagenChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        // Validar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona un archivo de imagen válido');
+            return;
+        }
+        
+        // Validar tamaño (máximo 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen no debe superar 5MB');
+            return;
+        }
+        
+        form.imagen = file;
+        
+        // Crear preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagenPreview.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+const eliminarImagen = () => {
+    form.imagen = null;
+    imagenPreview.value = null;
 };
 
 const submit = () => {
@@ -181,6 +215,43 @@ const handleInput = (field) => {
                                 <p class="mt-1 text-xs" style="color: var(--text-tertiary);">
                                     Se asigna automáticamente según el país seleccionado
                                 </p>
+                            </div>
+
+                            <!-- Imagen de la Ruta (Opcional) -->
+                            <div>
+                                <label for="imagen" class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+                                    Imagen de la Ruta (Opcional)
+                                </label>
+                                <div class="space-y-3">
+                                    <div v-if="imagenPreview" class="relative inline-block">
+                                        <img :src="imagenPreview" alt="Preview" class="h-32 w-48 object-cover rounded-lg border" style="border-color: var(--border-primary);" />
+                                        <button
+                                            type="button"
+                                            @click="eliminarImagen"
+                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <input
+                                        id="imagen"
+                                        type="file"
+                                        accept="image/*"
+                                        @change="handleImagenChange"
+                                        class="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+                                        style="
+                                            background-color: var(--bg-primary);
+                                            color: var(--text-primary);
+                                            border-color: var(--border-primary);
+                                        "
+                                    />
+                                    <p class="mt-1 text-xs" style="color: var(--text-tertiary);">
+                                        📌 Si no subes una imagen, se mostrará la imagen por defecto. Máximo 5MB.
+                                    </p>
+                                </div>
+                                <InputError class="mt-2" :message="form.errors.imagen" />
                             </div>
 
                             <!-- Botones -->

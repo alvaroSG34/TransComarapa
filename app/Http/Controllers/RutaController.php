@@ -46,7 +46,14 @@ class RutaController extends Controller
             'nombre' => 'required|string|max:255',
             'pais_operacion' => 'required|string|max:100',
             'moneda' => 'required|string|size:3',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Máximo 5MB
         ]);
+
+        // Manejar la carga de la imagen
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('rutas', 'public');
+            $validated['imagen'] = $path;
+        }
 
         $this->rutaRepository->create($validated);
 
@@ -99,7 +106,20 @@ class RutaController extends Controller
             'nombre' => 'required|string|max:255',
             'pais_operacion' => 'required|string|max:100',
             'moneda' => 'required|string|size:3',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Máximo 5MB
         ]);
+
+        // Manejar la carga de la nueva imagen
+        if ($request->hasFile('imagen')) {
+            // Eliminar la imagen anterior si existe
+            $ruta = $this->rutaRepository->find($id);
+            if ($ruta && $ruta->imagen) {
+                \Storage::disk('public')->delete($ruta->imagen);
+            }
+            
+            $path = $request->file('imagen')->store('rutas', 'public');
+            $validated['imagen'] = $path;
+        }
 
         $updated = $this->rutaRepository->update($id, $validated);
 

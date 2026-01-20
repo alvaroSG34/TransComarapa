@@ -16,7 +16,7 @@ const props = defineProps({
 
 const form = useForm({
     viaje_id: props.viaje?.id || '',
-    asiento: '',
+    asientos: [], // Array para múltiples asientos
     metodo_pago: '',
 });
 
@@ -39,6 +39,29 @@ const estadoDebug = ref('Inicializando...');
 // Precio y moneda del viaje (configurada por el administrador)
 const montoBob = computed(() => parseFloat(props.viaje?.precio) || 0);
 const monedaViaje = computed(() => props.viaje?.moneda || 'BOB');
+
+// Precio total basado en cantidad de asientos seleccionados
+const precioTotal = computed(() => {
+    const cantidadAsientos = form.asientos.length;
+    return montoBob.value * cantidadAsientos;
+});
+
+// Función para seleccionar/deseleccionar asiento
+const toggleAsiento = (numeroAsiento) => {
+    const index = form.asientos.indexOf(numeroAsiento);
+    if (index > -1) {
+        // Deseleccionar
+        form.asientos.splice(index, 1);
+    } else {
+        // Seleccionar
+        form.asientos.push(numeroAsiento);
+    }
+};
+
+// Verificar si un asiento está seleccionado
+const isAsientoSeleccionado = (numeroAsiento) => {
+    return form.asientos.includes(numeroAsiento);
+};
 
 const simboloMoneda = computed(() => {
     const simbolos = {
@@ -172,11 +195,11 @@ const seleccionarMetodoPago = (metodo) => {
 
 const crearPaymentIntent = () => {
     console.log('🔵 [Stripe Debug] Intentando crear PaymentIntent...');
-    console.log('🔵 [Stripe Debug] Form data:', { asiento: form.asiento, viaje_id: form.viaje_id, metodo_pago: form.metodo_pago, moneda: form.moneda });
+    console.log('🔵 [Stripe Debug] Form data:', { asientos: form.asientos, viaje_id: form.viaje_id, metodo_pago: form.metodo_pago, moneda: form.moneda });
     
-    if (!form.asiento || !form.viaje_id || !form.metodo_pago || form.metodo_pago !== 'Stripe') {
+    if (!form.asientos || form.asientos.length === 0 || !form.viaje_id || !form.metodo_pago || form.metodo_pago !== 'Stripe') {
         console.warn('⚠️ [Stripe Debug] Datos incompletos para crear PaymentIntent');
-        estadoDebug.value = 'Faltan datos (asiento, viaje o método)';
+        estadoDebug.value = 'Faltan datos (asientos, viaje o método)';
         return;
     }
 
@@ -437,8 +460,28 @@ const formatearFecha = (fecha) => {
                     <!-- Selección de Asiento -->
                     <div>
                         <label class="block text-sm font-medium mb-3" style="color: var(--text-primary)">
-                            Selecciona tu Asiento *
+                            Selecciona tus Asientos * <span class="text-sm font-normal" style="color: var(--text-secondary)">(Puedes seleccionar varios)</span>
                         </label>
+                        
+                        <!-- Contador de asientos seleccionados y precio total -->
+                        <div v-if="form.asientos.length > 0" class="mb-4 p-3 rounded-lg" style="background-color: var(--accent-100); border: 1px solid var(--accent-color)">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg font-bold" style="color: var(--accent-color)">
+                                        🎫 {{ form.asientos.length }} {{ form.asientos.length === 1 ? 'asiento' : 'asientos' }} seleccionado{{ form.asientos.length !== 1 ? 's' : '' }}
+                                    </span>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm" style="color: var(--text-secondary)">Precio Total:</div>
+                                    <div class="text-2xl font-bold" style="color: var(--accent-color)">
+                                        {{ simboloMoneda }} {{ precioTotal.toFixed(2) }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-sm" style="color: var(--text-secondary)">
+                                Asientos: <span class="font-medium" style="color: var(--accent-color)">{{ form.asientos.sort((a, b) => a - b).join(', ') }}</span>
+                            </div>
+                        </div>
                         
                         <!-- Mapa de Asientos -->
                         <div class="p-4 rounded-lg mb-4" style="background-color: var(--header-bg); border: 1px solid var(--border-color)">
@@ -447,12 +490,12 @@ const formatearFecha = (fecha) => {
                                     v-for="asiento in asientosDisponiblesArray"
                                     :key="asiento.numero"
                                     type="button"
-                                    @click="form.asiento = asiento.numero"
+                                    @click="toggleAsiento(asiento.numero)"
                                     :disabled="asiento.ocupado"
                                     class="p-3 rounded text-sm font-medium transition-colors"
                                     :class="{
-                                        'bg-green-100 text-green-800 hover:bg-green-200': !asiento.ocupado && form.asiento != asiento.numero,
-                                        'bg-blue-600 text-white': form.asiento == asiento.numero,
+                                        'bg-green-100 text-green-800 hover:bg-green-200': !asiento.ocupado && !isAsientoSeleccionado(asiento.numero),
+                                        'bg-blue-600 text-white hover:bg-blue-700': isAsientoSeleccionado(asiento.numero),
                                         'bg-gray-300 text-gray-500 cursor-not-allowed': asiento.ocupado
                                     }"
                                 >
@@ -475,11 +518,11 @@ const formatearFecha = (fecha) => {
                             </div>
                         </div>
                         
-                        <p v-if="form.errors.asiento" class="mt-1 text-sm text-red-600">
-                            {{ form.errors.asiento }}
+                        <p v-if="form.errors.asientos" class="mt-1 text-sm text-red-600">
+                            {{ form.errors.asientos }}
                         </p>
                         <p v-else class="text-sm" style="color: var(--text-secondary)">
-                            Selecciona un asiento disponible del mapa
+                            💡 Haz clic en los asientos disponibles para seleccionarlos. Puedes seleccionar varios para comprar múltiples boletos a la vez.
                         </p>
                     </div>
 
@@ -610,10 +653,10 @@ const formatearFecha = (fecha) => {
                         </Link>
                         <button
                             type="submit"
-                            :disabled="form.processing || !form.asiento || !form.metodo_pago || procesandoStripe"
+                            :disabled="form.processing || !form.asientos || form.asientos.length === 0 || !form.metodo_pago || procesandoStripe"
                             class="px-6 py-2 rounded-md text-sm font-medium text-white transition-all duration-200 hover:scale-105"
-                            style="background: linear-gradient(135deg, var(--primary-600), var(--primary-500));" con Stripe
-                            :class="{ 'opacity-50 cursor-not-allowed': form.processing || !form.asiento || !form.metodo_pago || procesandoStripe }"
+                            style="background: linear-gradient(135deg, var(--primary-600), var(--primary-500));"
+                            :class="{ 'opacity-50 cursor-not-allowed': form.processing || !form.asientos || form.asientos.length === 0 || !form.metodo_pago || procesandoStripe }"
                         >
                             {{ procesandoStripe ? 'Procesando pago...' : form.processing ? 'Procesando...' : form.metodo_pago === 'Stripe' ? (clientSecret ? 'Pagar con Tarjeta' : 'Continuar') : 'Confirmar Compra' }}
                         </button>

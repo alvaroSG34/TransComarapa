@@ -25,10 +25,12 @@ watch(paisFiltro, (newValue) => {
 
 // Función para obtener la imagen de la ruta (placeholder por ahora)
 const obtenerImagenRuta = (ruta) => {
-    // Por ahora usamos una imagen placeholder
-    // Cuando tengas las imágenes, puedes mapearlas por nombre, origen, destino, etc.
-    // Ejemplo: return `/images/rutas/${ruta.nombre.toLowerCase().replace(/\s+/g, '-')}.jpg`;
-    return busImage; // Imagen placeholder
+    // Si la ruta tiene imagen personalizada, usarla
+    if (ruta.imagen) {
+        return `/storage/${ruta.imagen}`;
+    }
+    // Si no, usar la imagen por defecto
+    return busImage;
 };
 </script>
 
